@@ -43,8 +43,8 @@ genopt = "Unix Makefiles"
   end
 end
 
-qml_steps = @build_steps begin
-	`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_PREFIX_PATH="$cmake_prefix" -DCxxWrap_DIR="$cxx_wrap_dir" $trilinoswrap_srcdir`
+trilinos_steps = @build_steps begin
+	`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_PREFIX_PATH="$cmake_prefix" -DCxxWrap_DIR="$cxx_wrap_dir" -DCMAKE_CXX_COMPILER=mpic++ -DCMAKE_C_COMPILER=mpicc $trilinoswrap_srcdir`
 	`cmake --build . --config Release --target install $makeopts`
 end
 
@@ -52,7 +52,7 @@ end
 if isdir(trilinoswrap_builddir)
   BinDeps.run(@build_steps begin
     ChangeDirectory(trilinoswrap_builddir)
-    qml_steps
+    trilinos_steps
   end)
 end
 
@@ -61,14 +61,11 @@ provides(BuildProcess,
     CreateDirectory(trilinoswrap_builddir)
     @build_steps begin
       ChangeDirectory(trilinoswrap_builddir)
-      FileRule(joinpath(prefix,"lib", "$(lib_prefix)trilinoswrap.$lib_suffix"),qml_steps)
+      FileRule(joinpath(prefix,"lib", "$(lib_prefix)trilinoswrap.$lib_suffix"),trilinos_steps)
     end
   end),trilinoswrap)
 
-#deps = [trilinoswrap]
-#provides(Binaries, Dict(URI("https://github.com/barche/QML.jl/releases/download/v0.2.0/QML-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip") => deps), os = :Windows)
-
-@BinDeps.install Dict([(:trilinoswrap, :_l_qml_wrap)])
+@BinDeps.install Dict([(:trilinoswrap, :_l_trilinos_wrap)])
 
 @static if is_windows()
   if build_on_windows

@@ -1,5 +1,11 @@
 using Trilinos
 using Base.Test
+using MPI
 
-# write your own tests here
-@test 1 == 2
+MPI.Init()
+ccomm = MPI.CComm(MPI.COMM_WORLD)
+
+comm = Teuchos.MpiComm(ccomm)
+
+@test Teuchos.getrank(comm) == MPI.Comm_rank(MPI.COMM_WORLD)
+@test Teuchos.getsize(comm) == MPI.Comm_size(MPI.COMM_WORLD)

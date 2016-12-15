@@ -12,6 +12,8 @@ find_package(CxxWrap)
 
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${CxxWrap_DIR}/../;${Trilinos_LIBRARY_DIRS}")
 
+include_directories(${Trilinos_INCLUDE_DIRS})
+
 add_library(trilinoswrap SHARED
   module.cpp
   teuchos.cpp)

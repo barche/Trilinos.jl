@@ -3,7 +3,7 @@
 namespace trilinoswrap
 {
 
-extern void register_teuchos(cxx_wrap::Module mod);
+extern void register_teuchos(cxx_wrap::Module& mod);
 
 } // namespace trilinoswrap
 
