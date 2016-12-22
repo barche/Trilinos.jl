@@ -16,8 +16,10 @@ include_directories(${Trilinos_INCLUDE_DIRS})
 
 add_library(trilinoswrap SHARED
   module.cpp
-  teuchos.cpp)
-target_link_libraries(trilinoswrap ${Teuchos_LIBRARIES} CxxWrap::cxx_wrap)
+  teuchos.cpp
+  tpetra.cpp
+)
+target_link_libraries(trilinoswrap ${Teuchos_LIBRARIES} ${Tpetra_LIBRARIES} CxxWrap::cxx_wrap)
 
 install(TARGETS
   trilinoswrap

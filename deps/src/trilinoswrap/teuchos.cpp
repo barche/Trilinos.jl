@@ -3,34 +3,10 @@
 
 #include <Teuchos_DefaultMpiComm.hpp>
 
+#include "teuchos.hpp"
+
 namespace cxx_wrap
 {
-  // Some special-casing for RCP
-  template<typename T>
-  struct InstantiateParametricType<Teuchos::RCP<T>>
-  {
-    int operator()(Module& m) const
-    {
-      // Register the Julia type if not already instantiated
-      if(!static_type_mapping<Teuchos::RCP<T>>::has_julia_type())
-      {
-        jl_datatype_t* dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)m.get_julia_type("RCP"), jl_svec1(static_type_mapping<typename std::remove_const<T>::type>::julia_type()));
-        set_julia_type<Teuchos::RCP<T>>(dt);
-        protect_from_gc(dt);
-      }
-      return 0;
-    }
-  };
-
-  template<typename T>
-  struct ConvertToJulia<Teuchos::RCP<T>, false, false, false>
-  {
-    jl_value_t* operator()(const Teuchos::RCP<T>& cpp_obj) const
-    {
-      return create<Teuchos::RCP<T>>(cpp_obj);
-    }
-  };
-
   // Support MPI.CComm directly
   template<> struct IsBits<MPI_Comm> : std::true_type {};
 
@@ -54,11 +30,14 @@ namespace cxx_wrap
 namespace trilinoswrap
 {
 
+jl_datatype_t* g_rcp_type;
+
 void register_teuchos(cxx_wrap::Module& mod)
 {
   using namespace cxx_wrap;
 
   mod.add_type<Parametric<TypeVar<1>>>("RCP");
+  g_rcp_type = mod.get_julia_type("RCP");
 
   mod.add_abstract<Teuchos::Comm<int>>("Comm");
   mod.add_type<Teuchos::MpiComm<int>>("MpiComm", julia_type<Teuchos::Comm<int>>());
@@ -68,8 +47,8 @@ void register_teuchos(cxx_wrap::Module& mod)
     return teuchos_comm;
   });
 
-  mod.method("getrank", [](const Teuchos::RCP<const Teuchos::Comm<int>>& c) { return c->getRank(); });
-  mod.method("getsize", [](const Teuchos::RCP<const Teuchos::Comm<int>>& c) { return c->getSize(); });
+  mod.method("getRank", [](const Teuchos::RCP<const Teuchos::Comm<int>>& c) { return c->getRank(); });
+  mod.method("getSize", [](const Teuchos::RCP<const Teuchos::Comm<int>>& c) { return c->getSize(); });
 }
 
 } // namespace trilinoswrap
