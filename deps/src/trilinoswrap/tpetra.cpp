@@ -34,7 +34,7 @@ struct WrapMap
     {
       return Teuchos::rcp(new WrappedT(num_indices, index_base.value, comm));
     });
-    wrapped.module().method("getNodeNumElements", [] (const Teuchos::RCP<WrappedT const>& map) { return map->getNodeNumElements(); });
+    wrapped.method("getNodeNumElements", &WrappedT::getNodeNumElements);
   }
 };
 
@@ -44,7 +44,7 @@ void register_tpetra(cxx_wrap::Module& mod)
 
   mod.method("version", Tpetra::version);
 
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("Map")
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("Map", julia_rcp_type())
     .apply<Tpetra::Map<int,int>, Tpetra::Map<int,int64_t>>(WrapMap());
 
 
