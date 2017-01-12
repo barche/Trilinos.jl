@@ -43,7 +43,7 @@ genopt = "Unix Makefiles"
   end
 end
 
-build_type = "Release"
+build_type = get(ENV, "CXXWRAP_BUILD_TYPE", "Release")
 
 trilinos_steps = @build_steps begin
 	`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DCMAKE_PREFIX_PATH="$cmake_prefix" -DCxxWrap_DIR="$cxx_wrap_dir" -DCMAKE_CXX_COMPILER=mpic++ -DCMAKE_C_COMPILER=mpicc $trilinoswrap_srcdir`

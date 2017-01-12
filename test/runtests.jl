@@ -1,13 +1,10 @@
-using Trilinos
-using Base.Test
-using MPI
+myname = splitdir(@__FILE__)[end]
 
-MPI.Init()
+excluded = []
 
-ccomm = MPI.CComm(MPI.COMM_WORLD)
-comm = Teuchos.MpiComm(ccomm)
-
-@test Teuchos.getRank(comm) == MPI.Comm_rank(MPI.COMM_WORLD)
-@test Teuchos.getSize(comm) == MPI.Comm_size(MPI.COMM_WORLD)
-
-MPI.Finalize()
+for fname in readdir()
+  if fname != myname && endswith(fname, ".jl") && fname ∉ excluded
+    println("running test ", fname, "...")
+    include(fname)
+  end
+end
