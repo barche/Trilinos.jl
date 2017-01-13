@@ -54,10 +54,10 @@ map = Tpetra.Map(num_global_indices, indexbase, comm)
 
 # Number of local elements
 my_rank = Teuchos.getRank(comm)
-# if my_rank != 0
-#   redirect_stdout(DevNull)
-#   redirect_stderr(DevNull)
-# end
+if my_rank != 0
+  redirect_stdout(open("/dev/null", "w"))
+  redirect_stderr(open("/dev/null", "w"))
+end
 
 num_my_elements = Int(Tpetra.getNodeNumElements(map)) # UInt otherwise
 println("Number of elements for rank $my_rank is $num_my_elements")
