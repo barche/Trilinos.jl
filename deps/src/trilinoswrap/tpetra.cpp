@@ -15,30 +15,16 @@
 namespace cxx_wrap
 {
 
-// Match the Tpetra::Map type, skipping default types
-template<typename LocalOrdinalT, typename GlobalOrdinalT>
-struct BuildParameterList<Tpetra::Map<LocalOrdinalT, GlobalOrdinalT>>
+template<template<typename, typename, typename, bool> class T, typename P1, typename P2, typename P3, bool B>
+struct BuildParameterList<T<P1,P2,P3,B>>
 {
-  typedef ParameterList<LocalOrdinalT, GlobalOrdinalT> type;
+  typedef ParameterList<P1,P2,P3,bool> type;
 };
 
-// Match the Tpetra::CrsMatrix type, skipping default types
-template<typename ScalarT, typename LocalOrdinalT, typename GlobalOrdinalT>
-struct BuildParameterList<Tpetra::CrsMatrix<ScalarT, LocalOrdinalT, GlobalOrdinalT>>
+template<template<typename, typename, typename, typename, bool> class T, typename P1, typename P2, typename P3, typename P4, bool B>
+struct BuildParameterList<T<P1,P2,P3,P4,B>>
 {
-  typedef ParameterList<ScalarT, LocalOrdinalT, GlobalOrdinalT> type;
-};
-
-template<typename ScalarT, typename LocalOrdinalT, typename GlobalOrdinalT>
-struct BuildParameterList<Tpetra::MultiVector<ScalarT, LocalOrdinalT, GlobalOrdinalT>>
-{
-  typedef ParameterList<ScalarT, LocalOrdinalT, GlobalOrdinalT> type;
-};
-
-template<typename ScalarT, typename LocalOrdinalT, typename GlobalOrdinalT>
-struct BuildParameterList<Tpetra::Vector<ScalarT, LocalOrdinalT, GlobalOrdinalT>>
-{
-  typedef ParameterList<ScalarT, LocalOrdinalT, GlobalOrdinalT> type;
+  typedef ParameterList<P1,P2,P3,P4,bool> type;
 };
 
 template<> struct IsBits<Tpetra::ProfileType> : std::true_type {};
@@ -62,6 +48,36 @@ struct WrapMap
     wrapped.method("getNodeNumElements", &WrappedT::getNodeNumElements);
     wrapped.method("getGlobalElement", &WrappedT::getGlobalElement);
     wrapped.method("isNodeGlobalElement", &WrappedT::isNodeGlobalElement);
+  }
+};
+
+struct WrapCrsGraph
+{
+  template<typename TypeWrapperT>
+  void operator()(TypeWrapperT&& wrapped)
+  {
+    typedef typename TypeWrapperT::type WrappedT;
+    typedef typename WrappedT::local_ordinal_type local_ordinal_type;
+    typedef typename WrappedT::global_ordinal_type global_ordinal_type;
+
+    wrapped.method("insertGlobalIndices",
+      static_cast<void (WrappedT::*)(const global_ordinal_type, const Teuchos::ArrayView<const global_ordinal_type>&)>(&WrappedT::insertGlobalIndices));
+    wrapped.module().method("fillComplete", [](WrappedT& w) { w.fillComplete(); });
+    wrapped.method("getDomainMap", &WrappedT::getDomainMap);
+    wrapped.method("getRangeMap", &WrappedT::getRangeMap);
+    wrapped.method("getRowMap", &WrappedT::getRowMap);
+    wrapped.module().method("resumeFill", [](WrappedT& w) { w.resumeFill(); });
+    wrapped.method("getNumEntriesInGlobalRow", &WrappedT::getNumEntriesInGlobalRow);
+    wrapped.method("getGlobalRowCopy", &WrappedT::getGlobalRowCopy);
+
+    wrapped.module().method("CrsGraph", [](const Teuchos::RCP<const typename WrappedT::map_type>& rowmap, const std::size_t max_num_entries_per_row)
+    {
+      return Teuchos::rcp(new WrappedT(rowmap, max_num_entries_per_row, Tpetra::DynamicProfile));
+    });
+    wrapped.module().method("CrsGraph", [](const Teuchos::RCP<const typename WrappedT::map_type>& rowmap, const std::size_t max_num_entries_per_row, const Tpetra::ProfileType pftype)
+    {
+      return Teuchos::rcp(new WrappedT(rowmap, max_num_entries_per_row, pftype));
+    });
   }
 };
 
@@ -150,6 +166,9 @@ void register_tpetra(cxx_wrap::Module& mod)
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("Map", julia_rcp_wrappable())
     .apply<Tpetra::Map<int,int>, Tpetra::Map<int,int64_t>>(WrapMap());
+
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("CrsGraph", julia_rcp_wrappable())
+    .apply<Tpetra::CrsGraph<int,int>, Tpetra::CrsGraph<int, int64_t>>(WrapCrsGraph());
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("CrsMatrix", julia_rcp_wrappable())
     .apply<Tpetra::CrsMatrix<double,int,int>, Tpetra::CrsMatrix<double,int,int64_t>>(WrapCrsMatrix());
