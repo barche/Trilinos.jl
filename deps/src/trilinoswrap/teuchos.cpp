@@ -3,6 +3,7 @@
 
 #include <Teuchos_BLAS_types.hpp>
 #include <Teuchos_DefaultMpiComm.hpp>
+#include <Teuchos_ParameterList.hpp>
 
 #include "teuchos.hpp"
 
@@ -19,6 +20,12 @@ namespace cxx_wrap
   };
 
   template<> struct IsBits<Teuchos::ETransp> : std::true_type {};
+
+  template<typename T> struct DefaultConstructible<Teuchos::Comm<T>> : std::false_type {};
+  template<> struct DefaultConstructible<Teuchos::ParameterList> : std::false_type {};
+
+  template<typename T> struct CopyConstructible<Teuchos::Comm<T>> : std::false_type {};
+  template<> struct CopyConstructible<Teuchos::ParameterList> : std::false_type {};
 }
 
 namespace trilinoswrap
@@ -72,6 +79,14 @@ void register_teuchos(cxx_wrap::Module& mod)
   mod.set_const("NO_TRANS", Teuchos::NO_TRANS);
   mod.set_const("TRANS", Teuchos::TRANS);
   mod.set_const("CONJ_TRANS", Teuchos::CONJ_TRANS);
+
+  mod.add_type<Teuchos::ParameterList>("ParameterList", julia_rcp_wrappable())
+    .method("numParams", &Teuchos::ParameterList::numParams)
+    .method("setName", &Teuchos::ParameterList::setName)
+    .method("name", static_cast<const std::string& (Teuchos::ParameterList::*)() const>(&Teuchos::ParameterList::name));
+    //.method("set", &Teuchos::ParameterList::set<int>);
+  mod.method("ParameterList", [] () { return Teuchos::rcp(new Teuchos::ParameterList()); });
+  mod.method("ParameterList", [] (const std::string& name) { return Teuchos::rcp(new Teuchos::ParameterList(name)); });
 }
 
 } // namespace trilinoswrap

@@ -105,6 +105,7 @@ struct WrapCrsMatrix
     wrapped.method("getNumEntriesInGlobalRow", &WrappedT::getNumEntriesInGlobalRow);
     wrapped.method("getGlobalRowCopy", &WrappedT::getGlobalRowCopy);
     wrapped.method("replaceGlobalValues", static_cast<local_ordinal_type (WrappedT::*)(const global_ordinal_type, const Teuchos::ArrayView<const global_ordinal_type>&, const Teuchos::ArrayView<const scalar_type>&) const>(&WrappedT::replaceGlobalValues));
+    wrapped.method("getFrobeniusNorm", &WrappedT::getFrobeniusNorm);
 
     wrapped.module().method("CrsMatrix", [](const Teuchos::RCP<const typename WrappedT::map_type>& rowmap, const std::size_t max_num_entries_per_row)
     {
@@ -113,6 +114,10 @@ struct WrapCrsMatrix
     wrapped.module().method("CrsMatrix", [](const Teuchos::RCP<const typename WrappedT::map_type>& rowmap, const std::size_t max_num_entries_per_row, const Tpetra::ProfileType pftype)
     {
       return Teuchos::rcp(new WrappedT(rowmap, max_num_entries_per_row, pftype));
+    });
+    wrapped.module().method("CrsMatrix", [](const Teuchos::RCP<const Tpetra::CrsGraph<local_ordinal_type, global_ordinal_type>>& graph)
+    {
+      return Teuchos::rcp(new WrappedT(graph));
     });
   }
 };

@@ -3,8 +3,9 @@
 
 #include <array.hpp>
 #include <cxx_wrap.hpp>
-#include <Teuchos_RCP.hpp>
+
 #include <Teuchos_ArrayViewDecl.hpp>
+#include <Teuchos_RCP.hpp>
 
 namespace trilinoswrap
 {

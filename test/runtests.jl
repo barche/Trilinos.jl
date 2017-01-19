@@ -1,4 +1,10 @@
+using MPI
+
 myname = splitdir(@__FILE__)[end]
+
+intesting = true
+
+MPI.Init()
 
 excluded = []
 
@@ -8,3 +14,5 @@ for fname in readdir()
     include(fname)
   end
 end
+
+MPI.Finalize()
