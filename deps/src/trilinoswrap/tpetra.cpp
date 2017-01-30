@@ -169,13 +169,13 @@ void register_tpetra(cxx_wrap::Module& mod)
   mod.set_const("StaticProfile", Tpetra::StaticProfile);
   mod.set_const("DynamicProfile", Tpetra::DynamicProfile);
 
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("Map", julia_rcp_wrappable())
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("Map", rcp_wrappable())
     .apply<Tpetra::Map<int,int>, Tpetra::Map<int,int64_t>>(WrapMap());
 
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("CrsGraph", julia_rcp_wrappable())
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("CrsGraph", rcp_wrappable())
     .apply<Tpetra::CrsGraph<int,int>, Tpetra::CrsGraph<int, int64_t>>(WrapCrsGraph());
 
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("CrsMatrix", julia_rcp_wrappable())
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("CrsMatrix", rcp_wrappable())
     .apply<Tpetra::CrsMatrix<double,int,int>, Tpetra::CrsMatrix<double,int,int64_t>>(WrapCrsMatrix());
 
   mod.add_abstract<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("MultiVector")

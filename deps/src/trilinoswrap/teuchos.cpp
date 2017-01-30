@@ -4,6 +4,7 @@
 #include <Teuchos_BLAS_types.hpp>
 #include <Teuchos_DefaultMpiComm.hpp>
 #include <Teuchos_ParameterList.hpp>
+#include <Teuchos_XMLParameterListHelpers.hpp>
 
 #include "teuchos.hpp"
 
@@ -33,9 +34,9 @@ namespace trilinoswrap
 
 jl_datatype_t* g_rcp_type;
 
-jl_datatype_t* julia_rcp_wrappable()
+jl_datatype_t* rcp_wrappable()
 {
-  return cxx_wrap::julia_type("JuliaRCPWrappable", "Trilinos");
+  return cxx_wrap::julia_type("RCPWrappable", "Trilinos");
 }
 
 struct WrapArrayView
@@ -53,6 +54,67 @@ struct WrapArrayView
   }
 };
 
+template<typename T>
+struct AddSetMethod
+{
+  void operator()(cxx_wrap::Module& mod)
+  {
+    mod.method("set", [] (Teuchos::ParameterList& pl, const std::string& name, const T& value) { pl.set(name, value); });
+  }
+};
+
+template<typename T>
+struct AddSetMethod<cxx_wrap::StrictlyTypedNumber<T>>
+{
+  void operator()(cxx_wrap::Module& mod)
+  {
+    mod.method("set", [] (Teuchos::ParameterList& pl, const std::string& name, const cxx_wrap::StrictlyTypedNumber<T> value) { pl.set(name, value.value); });
+  }
+};
+
+template<int Dummy=0> void wrap_set(cxx_wrap::Module&) {}
+
+template<typename T, typename... TypesT>
+void wrap_set(cxx_wrap::Module& mod)
+{
+  AddSetMethod<T>()(mod);
+  wrap_set<TypesT...>(mod);
+}
+
+template<int Dummy=0> void wrap_get(cxx_wrap::Module&) {}
+
+template<typename T, typename... TypesT>
+void wrap_get(cxx_wrap::Module& mod)
+{
+  mod.method("get", [] (cxx_wrap::SingletonType<T>, Teuchos::ParameterList& pl, const std::string& name) -> T { return pl.get<T>(name); });
+  wrap_get<TypesT...>(mod);
+}
+
+template<int Dummy=0> void wrap_is_type(cxx_wrap::Module&) {}
+
+template<typename T, typename... TypesT>
+void wrap_is_type(cxx_wrap::Module& mod)
+{
+  mod.method("isType", [] (cxx_wrap::SingletonType<T>, Teuchos::ParameterList& pl, const std::string& name) { return pl.isType<T>(name); });
+  wrap_is_type<TypesT...>(mod);
+}
+
+template<int Dummy=0> jl_datatype_t* get_type(Teuchos::ParameterList& pl, const std::string& pname)
+{
+  std::cout << "warning, unknown type for parameter " << pname << " of parameterlist " << pl.name() << std::endl;
+  return cxx_wrap::static_type_mapping<void>::julia_type();
+}
+
+template<typename T, typename... TypesT>
+jl_datatype_t* get_type(Teuchos::ParameterList& pl, const std::string& pname)
+{
+  if(pl.isType<T>(pname))
+  {
+    return cxx_wrap::static_type_mapping<T>::julia_type();
+  }
+  return get_type<TypesT...>(pl, pname);
+}
+
 void register_teuchos(cxx_wrap::Module& mod)
 {
   using namespace cxx_wrap;
@@ -62,7 +124,7 @@ void register_teuchos(cxx_wrap::Module& mod)
   g_rcp_type = mod.get_julia_type("RCP");
 
   // Comm
-  mod.add_abstract<Teuchos::Comm<int>>("Comm", julia_rcp_wrappable())
+  mod.add_abstract<Teuchos::Comm<int>>("Comm", rcp_wrappable())
     .method("getRank", &Teuchos::Comm<int>::getRank)
     .method("getSize", &Teuchos::Comm<int>::getSize);
   mod.add_type<Teuchos::MpiComm<int>>("MpiComm", julia_type<Teuchos::Comm<int>>());
@@ -80,13 +142,32 @@ void register_teuchos(cxx_wrap::Module& mod)
   mod.set_const("TRANS", Teuchos::TRANS);
   mod.set_const("CONJ_TRANS", Teuchos::CONJ_TRANS);
 
-  mod.add_type<Teuchos::ParameterList>("ParameterList", julia_rcp_wrappable())
+  mod.add_type<Teuchos::ParameterList>("ParameterList", cxx_wrap::julia_type("RCPAssociative", "Trilinos"))
     .method("numParams", &Teuchos::ParameterList::numParams)
     .method("setName", &Teuchos::ParameterList::setName)
-    .method("name", static_cast<const std::string& (Teuchos::ParameterList::*)() const>(&Teuchos::ParameterList::name));
-    //.method("set", &Teuchos::ParameterList::set<int>);
+    .method("name", static_cast<const std::string& (Teuchos::ParameterList::*)() const>(&Teuchos::ParameterList::name))
+    .method("print", static_cast<void (Teuchos::ParameterList::*)() const>(&Teuchos::ParameterList::print))
+    .method("isParameter", &Teuchos::ParameterList::isParameter)
+    .method("isSublist", &Teuchos::ParameterList::isSublist);
   mod.method("ParameterList", [] () { return Teuchos::rcp(new Teuchos::ParameterList()); });
   mod.method("ParameterList", [] (const std::string& name) { return Teuchos::rcp(new Teuchos::ParameterList(name)); });
+  mod.method("writeParameterListToXmlFile", [] (const Teuchos::ParameterList& pl, const std::string& filename) { Teuchos::writeParameterListToXmlFile(pl, filename); });
+  wrap_set<StrictlyTypedNumber<int32_t>, StrictlyTypedNumber<int64_t>, StrictlyTypedNumber<double>, std::string, bool>(mod);
+  wrap_get<int32_t, int64_t, double, std::string, bool>(mod);
+  wrap_is_type<int32_t, int64_t, double, std::string, bool>(mod);
+  mod.method("get_type", get_type<int32_t, int64_t, double, std::string, bool>);
+  mod.method("sublist", [] (Teuchos::ParameterList& pl, const std::string& name) -> Teuchos::ParameterList& { return pl.sublist(name); });
+  mod.method("keys", [] (const Teuchos::ParameterList& pl)
+  {
+    cxx_wrap::Array<std::string> keys;
+    JL_GC_PUSH1(keys.gc_pointer());
+    for(const auto& elem : pl)
+    {
+      keys.push_back(elem.first);
+    }
+    JL_GC_POP();
+    return (jl_value_t*)keys.wrapped();
+  });
 }
 
 } // namespace trilinoswrap

@@ -12,12 +12,15 @@ if !isfile(depsfile)
 end
 include(depsfile)
 
-# Base type for all RCP-wrappable types in Julia
-abstract JuliaRCPWrappable
+# Base type for RCP-wrappable types in Julia
+abstract RCPWrappable
+
+# Base type for RCP-wrappable associative types in Julia
+abstract RCPAssociative <: Associative{String, Any}
 
 # Generate RCP overloads automatically
-CxxWrap.argument_overloads{T <: JuliaRCPWrappable}(t::Type{T}) = [Trilinos.Teuchos.RCP{T}]
-
+CxxWrap.argument_overloads{T <: RCPWrappable}(t::Type{T}) = [Trilinos.Teuchos.RCP{T}]
+CxxWrap.argument_overloads{T <: RCPAssociative}(t::Type{T}) = [Trilinos.Teuchos.RCP{T}]
 # Overload for size_t
 @static if Sys.WORD_SIZE == 64
   CxxWrap.argument_overloads(t::Type{UInt64}) = [Int64]
@@ -29,6 +32,30 @@ module Teuchos
 using Trilinos, CxxWrap, MPI
 
 wrap_module(Trilinos.registry)
+
+Base.getindex{T}(p::RCP{T}) = convert(T, p)
+
+# High-level interface for ParameterList
+Base.length(pl::ParameterList) = numParams(pl)
+function Base.getindex(pl::ParameterList, key)
+  if !isParameter(pl, key)
+    throw(KeyError(key))
+  end
+  if isSublist(pl, key)
+    return sublist(pl, key)
+  end
+  return get(get_type(pl, key), pl, key)
+end
+Base.setindex!(pl::ParameterList, v, key) = set(pl, key, v)
+Base.keys(pl::ParameterList) = keys(pl)
+Base.start(pl::ParameterList) = (start(keys(pl)), keys(pl))
+Base.next(pl::ParameterList, state) = ((state[2][state[1]], pl[state[2][state[1]]]), (state[1]+1,state[2]))
+Base.done(pl::ParameterList, state) = state[1] == length(state[2])+1
+
+# Convenience methods for direct RCP access
+Base.length(pl::RCP{ParameterList}) = Base.length(convert(ParameterList, pl))
+Base.getindex(pl::RCP{ParameterList}, key) = Base.getindex(convert(ParameterList, pl), key)
+Base.setindex!(pl::RCP{ParameterList}, v, key) = Base.setindex!(convert(ParameterList, pl), v, key)
 
 end
 

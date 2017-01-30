@@ -11,7 +11,7 @@ namespace trilinoswrap
 {
   extern jl_datatype_t* g_rcp_type;
 
-  jl_datatype_t* julia_rcp_wrappable();
+  jl_datatype_t* rcp_wrappable();
 }
 
 namespace cxx_wrap
