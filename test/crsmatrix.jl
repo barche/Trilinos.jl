@@ -10,7 +10,7 @@ comm = Teuchos.MpiComm(MPI.CComm(MPI.COMM_WORLD))
 
 const n = 20
 
-# diagonal nxn test matrix
+# tri-diagonal nxn test matrix
 A = spdiagm((2*ones(n-1),ones(n),3*ones(n-1)), (-1,0,1))
 
 rowmap = Tpetra.Map(n, 0, comm)

@@ -5,17 +5,30 @@
 #include <cxx_wrap.hpp>
 
 #include <Teuchos_ArrayViewDecl.hpp>
+#include <Teuchos_BLAS_types.hpp>
 #include <Teuchos_RCP.hpp>
+#include <Teuchos_VerbosityLevel.hpp>
 
 namespace trilinoswrap
 {
   extern jl_datatype_t* g_rcp_type;
 
   jl_datatype_t* rcp_wrappable();
+
+  /// Helper function to generate RCP conversions between convertible C++ types
+  template<typename FromT, typename ToT>
+  inline Teuchos::RCP<ToT> convert(cxx_wrap::SingletonType<Teuchos::RCP<ToT>>, const Teuchos::RCP<FromT>& rcp)
+  {
+    return Teuchos::RCP<ToT>(rcp);
+  }
 }
 
 namespace cxx_wrap
 {
+
+template<> struct IsBits<MPI_Comm> : std::true_type {};
+template<> struct IsBits<Teuchos::ETransp> : std::true_type {};
+template<> struct IsBits<Teuchos::EVerbosityLevel> : std::true_type {};
 
 // Some special-casing for RCP
 template<typename T>

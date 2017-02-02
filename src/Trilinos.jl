@@ -2,6 +2,7 @@ module Trilinos
 
 export Teuchos
 export Tpetra
+export Thyra
 
 using CxxWrap
 
@@ -59,10 +60,19 @@ Base.setindex!(pl::RCP{ParameterList}, v, key) = Base.setindex!(convert(Paramete
 
 end
 
+module Kokkos
+using Trilinos, CxxWrap, MPI
+wrap_module(Trilinos.registry)
+end
+
 module Tpetra
 using Trilinos, CxxWrap, MPI
 
-wrap_module(Trilinos.registry)
+wrap_module_types(Trilinos.registry)
+
+CxxWrap.argument_overloads{T1,T2,T3}(t::Type{Trilinos.Teuchos.RCP{Tpetra.Operator{T1,T2,T3}}}) = [Trilinos.Teuchos.RCP{Tpetra.CrsMatrix{T1,T2,T3}}]
+
+wrap_module_functions(Trilinos.registry)
 
 Base.dot(a::Tpetra.Vector, b::Tpetra.Vector) = Tpetra.dot(a,b)
 Tpetra.getGlobalElement(map, idx::UInt64) = Tpetra.getGlobalElement(map, convert(Int, idx))
@@ -72,9 +82,9 @@ Construct a Trilinos sparse matrix from a SparseMatrixCSC. Note that the resulti
 The resulting matrix has a fixed structure (using a constant CrsGraph in Tpetra) and its rows are distributed over the available MPI processes.
 The matrix A is supposed to be completely supplied on each rank.
 """
-function CrsMatrix{ScalarT, GlobalOrdninalT}(A::SparseMatrixCSC{ScalarT, GlobalOrdninalT}, rowmap)
+function CrsMatrix{ScalarT, GlobalOrdinalT}(A::SparseMatrixCSC{ScalarT, GlobalOrdinalT}, rowmap)
   # Create the sparse matrix structure
-  matrix_graph = CrsGraph(rowmap, GlobalOrdninalT(0))
+  matrix_graph = CrsGraph(rowmap, GlobalOrdinalT(0))
   rows = rowvals(A)
   vals = nonzeros(A)
   num_my_elements = getNodeNumElements(rowmap)
@@ -93,6 +103,18 @@ function CrsMatrix{ScalarT, GlobalOrdninalT}(A::SparseMatrixCSC{ScalarT, GlobalO
   fillComplete(tpetra_matrix)
   return tpetra_matrix
 end
+
+end
+
+module Thyra
+using Trilinos, CxxWrap, MPI
+
+wrap_module_types(Trilinos.registry)
+
+CxxWrap.argument_overloads{ScalarT}(t::Type{Trilinos.Teuchos.RCP{LinearOpBase{ScalarT}}}) = [Trilinos.Teuchos.RCP]
+CxxWrap.argument_overloads{ScalarT}(t::Type{Trilinos.Teuchos.RCP{VectorSpaceBase{ScalarT}}}) = [Trilinos.Teuchos.RCP]
+
+wrap_module_functions(Trilinos.registry)
 
 end
 

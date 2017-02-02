@@ -11,16 +11,12 @@
 namespace cxx_wrap
 {
   // Support MPI.CComm directly
-  template<> struct IsBits<MPI_Comm> : std::true_type {};
-
   template<> struct static_type_mapping<MPI_Comm>
   {
     typedef MPI_Comm type;
     static jl_datatype_t* julia_type() { return ::cxx_wrap::julia_type("CComm", "MPI"); }
     template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
   };
-
-  template<> struct IsBits<Teuchos::ETransp> : std::true_type {};
 
   template<typename T> struct DefaultConstructible<Teuchos::Comm<T>> : std::false_type {};
   template<> struct DefaultConstructible<Teuchos::ParameterList> : std::false_type {};
@@ -141,6 +137,14 @@ void register_teuchos(cxx_wrap::Module& mod)
   mod.set_const("NO_TRANS", Teuchos::NO_TRANS);
   mod.set_const("TRANS", Teuchos::TRANS);
   mod.set_const("CONJ_TRANS", Teuchos::CONJ_TRANS);
+
+  mod.add_bits<Teuchos::EVerbosityLevel>("EVerbosityLevel");
+  mod.set_const("VERB_DEFAULT", Teuchos::VERB_DEFAULT);
+  mod.set_const("VERB_NONE", Teuchos::VERB_NONE);
+  mod.set_const("VERB_LOW", Teuchos::VERB_LOW);
+  mod.set_const("VERB_MEDIUM", Teuchos::VERB_MEDIUM);
+  mod.set_const("VERB_HIGH", Teuchos::VERB_HIGH);
+  mod.set_const("VERB_EXTREME", Teuchos::VERB_EXTREME);
 
   mod.add_type<Teuchos::ParameterList>("ParameterList", cxx_wrap::julia_type("RCPAssociative", "Trilinos"))
     .method("numParams", &Teuchos::ParameterList::numParams)

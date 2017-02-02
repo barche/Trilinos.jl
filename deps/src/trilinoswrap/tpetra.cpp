@@ -9,7 +9,6 @@
 #include <Tpetra_Vector.hpp>
 #include <Tpetra_Version.hpp>
 
-
 #include "teuchos.hpp"
 
 namespace cxx_wrap
@@ -91,6 +90,7 @@ struct WrapCrsMatrix
     typedef typename WrappedT::scalar_type scalar_type;
     typedef typename WrappedT::local_ordinal_type local_ordinal_type;
     typedef typename WrappedT::global_ordinal_type global_ordinal_type;
+    typedef typename WrappedT::node_type node_type;
     typedef Tpetra::MultiVector<scalar_type, local_ordinal_type, global_ordinal_type> vector_type;
 
     wrapped.method("insertGlobalValues",
@@ -119,6 +119,7 @@ struct WrapCrsMatrix
     {
       return Teuchos::rcp(new WrappedT(graph));
     });
+    wrapped.module().method("convert", convert<WrappedT, Tpetra::Operator<scalar_type, local_ordinal_type, global_ordinal_type, node_type>>);
   }
 };
 
@@ -159,6 +160,14 @@ struct WrapVector
   }
 };
 
+struct WrapTpetraNoOp
+{
+  template<typename TypeWrapperT>
+  void operator()(TypeWrapperT&&)
+  {
+  }
+};
+
 void register_tpetra(cxx_wrap::Module& mod)
 {
   using namespace cxx_wrap;
@@ -175,7 +184,10 @@ void register_tpetra(cxx_wrap::Module& mod)
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("CrsGraph", rcp_wrappable())
     .apply<Tpetra::CrsGraph<int,int>, Tpetra::CrsGraph<int, int64_t>>(WrapCrsGraph());
 
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("CrsMatrix", rcp_wrappable())
+  auto operator_type = mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("Operator", rcp_wrappable());
+  operator_type.apply<Tpetra::Operator<double,int,int>, Tpetra::Operator<double,int,int64_t>>(WrapTpetraNoOp());
+
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("CrsMatrix", operator_type.dt())
     .apply<Tpetra::CrsMatrix<double,int,int>, Tpetra::CrsMatrix<double,int,int64_t>>(WrapCrsMatrix());
 
   mod.add_abstract<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("MultiVector")
