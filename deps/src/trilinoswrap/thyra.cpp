@@ -6,6 +6,7 @@
 #include <Thyra_LinearOpWithSolveFactoryHelpers.hpp>
 #include <Thyra_TpetraLinearOp.hpp>
 #include <Thyra_TpetraMultiVector.hpp>
+#include <Thyra_TpetraVector.hpp>
 #include <Thyra_TpetraThyraWrappers.hpp>
 #include <Thyra_VectorBase.hpp>
 #include <Thyra_VectorStdOps.hpp>
@@ -25,6 +26,7 @@ struct WrapTpetraLinOpInternal<Thyra::TpetraLinearOp<ScalarT,LocalOrdinal,Global
   {
     mod.method("tpetraVectorSpace", Thyra::tpetraVectorSpace<ScalarT,LocalOrdinal,GlobalOrdinal,Node>);
     mod.method("tpetraLinearOp", Thyra::tpetraLinearOp<ScalarT,LocalOrdinal,GlobalOrdinal,Node>);
+    mod.method("tpetraVector", Thyra::tpetraVector<ScalarT,LocalOrdinal,GlobalOrdinal,Node>);
     mod.method("convert", convert<Thyra::TpetraVectorSpace<ScalarT,LocalOrdinal,GlobalOrdinal,Node>, Thyra::VectorSpaceBase<ScalarT>>);
     mod.method("convert", convert<Thyra::TpetraLinearOp<ScalarT,LocalOrdinal,GlobalOrdinal,Node>, Thyra::LinearOpBase<ScalarT>>);
   }
@@ -56,7 +58,7 @@ struct WrapLOWSFactory
   {
     typedef typename TypeWrapperT::type WrappedT;
     typedef typename extract_scalar_type<WrappedT>::type Scalar;
-    wrapped.module().method("BelosLinearOpWithSolveFactory", [] () { return Teuchos::RCP<WrappedT>(new Thyra::BelosLinearOpWithSolveFactory<Scalar>()); });
+    wrapped.module().method("BelosLinearOpWithSolveFactory", [] (cxx_wrap::SingletonType<Scalar>) { return Teuchos::RCP<WrappedT>(new Thyra::BelosLinearOpWithSolveFactory<Scalar>()); });
     wrapped.module().method("setVerbLevel", [] (const WrappedT& w, const Teuchos::EVerbosityLevel level) { w.setVerbLevel(level); });
     wrapped.method("createOp", &WrappedT::createOp);
     wrapped.method("setParameterList", &WrappedT::setParameterList);
@@ -86,17 +88,23 @@ void register_thyra(cxx_wrap::Module& mod)
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("TpetraVectorSpace", vecspace_base.dt())
     .apply<Thyra::TpetraVectorSpace<double,int,int,KokkosClassic::DefaultNode::DefaultNodeType>, Thyra::TpetraVectorSpace<double,int,int64_t,KokkosClassic::DefaultNode::DefaultNodeType>>(WrapNoOp());
 
+  auto vector_base = mod.add_type<Parametric<TypeVar<1>>>("VectorBase", rcp_wrappable());
+  vector_base.apply<Thyra::VectorBase<double>, Thyra::VectorBase<float>>(WrapNoOp());
+
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("TpetraVector", vector_base.dt())
+    .apply<Thyra::TpetraVector<double,int,int,KokkosClassic::DefaultNode::DefaultNodeType>, Thyra::TpetraVector<double,int,int64_t,KokkosClassic::DefaultNode::DefaultNodeType>>(WrapNoOp());
+
   auto linop_base = mod.add_type<Parametric<TypeVar<1>>>("LinearOpBase", rcp_wrappable())
     .apply<Thyra::LinearOpBase<double>, Thyra::LinearOpBase<float>>(WrapNoOp());
-
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("TpetraLinearOp", linop_base.dt())
-    .apply<Thyra::TpetraLinearOp<double,int,int>, Thyra::TpetraLinearOp<double,int,int64_t>>(WrapTpetraLinOp());
 
   mod.add_type<Parametric<TypeVar<1>>>("LinearOpWithSolveBase", rcp_wrappable())
     .apply<Thyra::LinearOpWithSolveBase<double>, Thyra::LinearOpWithSolveBase<float>>(WrapNoOp());
 
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("TpetraLinearOp", linop_base.dt())
+    .apply<Thyra::TpetraLinearOp<double,int,int>, Thyra::TpetraLinearOp<double,int,int64_t>>(WrapTpetraLinOp());
+
   mod.add_type<Parametric<TypeVar<1>>>("LinearOpWithSolveFactoryBase", rcp_wrappable())
-    .apply<Thyra::LinearOpWithSolveFactoryBase<double>>(WrapLOWSFactory());
+    .apply<Thyra::LinearOpWithSolveFactoryBase<double>, Thyra::LinearOpWithSolveFactoryBase<float>>(WrapLOWSFactory());
 }
 
 } // namespace trilinoswrap

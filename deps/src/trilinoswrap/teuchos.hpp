@@ -21,6 +21,12 @@ namespace trilinoswrap
   {
     return Teuchos::RCP<ToT>(rcp);
   }
+
+  template<typename FromT, typename ToT>
+  inline ToT* convert_unwrap(cxx_wrap::SingletonType<ToT>, const Teuchos::RCP<FromT>& rcp)
+  {
+    return rcp.get();
+  }
 }
 
 namespace cxx_wrap

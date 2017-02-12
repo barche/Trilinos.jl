@@ -14,10 +14,10 @@ end
 include(depsfile)
 
 # Base type for RCP-wrappable types in Julia
-abstract RCPWrappable
+abstract RCPWrappable <: CxxWrap.CppAny
 
 # Base type for RCP-wrappable associative types in Julia
-abstract RCPAssociative <: Associative{String, Any}
+abstract RCPAssociative <: CxxWrap.CppAssociative{String, Any}
 
 # Generate RCP overloads automatically
 CxxWrap.argument_overloads{T <: RCPWrappable}(t::Type{T}) = [Trilinos.Teuchos.RCP{T}]
@@ -71,10 +71,12 @@ using Trilinos, CxxWrap, MPI
 wrap_module_types(Trilinos.registry)
 
 CxxWrap.argument_overloads{T1,T2,T3}(t::Type{Trilinos.Teuchos.RCP{Tpetra.Operator{T1,T2,T3}}}) = [Trilinos.Teuchos.RCP{Tpetra.CrsMatrix{T1,T2,T3}}]
+CxxWrap.argument_overloads{T1,T2,T3}(t::Type{Tpetra.MultiVector{T1,T2,T3}}) = [Trilinos.Teuchos.RCP{Tpetra.Vector{T1,T2,T3}},Trilinos.Teuchos.RCP{Tpetra.MultiVector{T1,T2,T3}}]
 
 wrap_module_functions(Trilinos.registry)
 
 Base.dot(a::Tpetra.Vector, b::Tpetra.Vector) = Tpetra.dot(a,b)
+Base.dot(a::Trilinos.Teuchos.RCP, b::Trilinos.Teuchos.RCP) = Tpetra.dot(a,b)
 Tpetra.getGlobalElement(map, idx::UInt64) = Tpetra.getGlobalElement(map, convert(Int, idx))
 
 """

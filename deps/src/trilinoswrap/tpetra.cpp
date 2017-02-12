@@ -28,6 +28,8 @@ struct BuildParameterList<T<P1,P2,P3,P4,B>>
 
 template<> struct IsBits<Tpetra::ProfileType> : std::true_type {};
 
+template<typename T1, typename T2, typename T3, typename T4> struct CopyConstructible<Tpetra::Vector<T1,T2,T3,T4>> : std::false_type {};
+
 }
 
 namespace trilinoswrap
@@ -152,11 +154,11 @@ struct WrapVector
     typedef typename WrappedT::map_type map_type;
     typedef typename WrappedT::dot_type dot_type;
 
-    wrapped.template constructor<const Teuchos::RCP<const map_type>&>();
     wrapped.method("norm2", static_cast<mag_type (WrappedT::*)() const>(&WrappedT::norm2));
     wrapped.method("dot", static_cast<dot_type (WrappedT::*)(const WrappedT&) const>(&WrappedT::dot));
 
-    wrapped.module().method("Vector", [] (const Teuchos::RCP<const map_type>& map) { return cxx_wrap::create<WrappedT>(map); });
+    wrapped.module().method("Vector", [] (const Teuchos::RCP<const map_type>& map) { return Teuchos::rcp(new WrappedT(map)); });
+    wrapped.module().method("convert", convert_unwrap<WrappedT, Tpetra::MultiVector<scalar_type, typename WrappedT::local_ordinal_type, global_ordinal_type>>);
   }
 };
 
@@ -190,7 +192,7 @@ void register_tpetra(cxx_wrap::Module& mod)
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("CrsMatrix", operator_type.dt())
     .apply<Tpetra::CrsMatrix<double,int,int>, Tpetra::CrsMatrix<double,int,int64_t>>(WrapCrsMatrix());
 
-  mod.add_abstract<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("MultiVector")
+  mod.add_abstract<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("MultiVector", rcp_wrappable())
     .apply<Tpetra::MultiVector<double,int,int>, Tpetra::MultiVector<double,int,int64_t>>(WrapMultiVector());
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("Vector", mod.get_julia_type("MultiVector"))
     .apply<Tpetra::Vector<double,int,int>, Tpetra::Vector<double,int,int64_t>>(WrapVector());
