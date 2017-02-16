@@ -22,6 +22,7 @@ abstract RCPAssociative <: CxxWrap.CppAssociative{String, Any}
 # Generate RCP overloads automatically
 CxxWrap.argument_overloads{T <: RCPWrappable}(t::Type{T}) = [Trilinos.Teuchos.RCP{T}]
 CxxWrap.argument_overloads{T <: RCPAssociative}(t::Type{T}) = [Trilinos.Teuchos.RCP{T}]
+
 # Overload for size_t
 @static if Sys.WORD_SIZE == 64
   CxxWrap.argument_overloads(t::Type{UInt64}) = [Int64]
@@ -30,9 +31,14 @@ end
 registry = load_modules(_l_trilinos_wrap)
 
 module Teuchos
-using Trilinos, CxxWrap, MPI
+using CxxWrap, MPI
+import ..registry
 
-wrap_module(Trilinos.registry)
+wrap_module_types(registry)
+
+CxxWrap.argument_overloads{T}(t::Type{RCPPtr{T}}) = [RCP{T}]
+
+wrap_module_functions(registry)
 
 Base.getindex{T}(p::RCP{T}) = convert(T, p)
 
@@ -61,22 +67,25 @@ Base.setindex!(pl::RCP{ParameterList}, v, key) = Base.setindex!(convert(Paramete
 end
 
 module Kokkos
-using Trilinos, CxxWrap, MPI
-wrap_module(Trilinos.registry)
+using CxxWrap, MPI
+import ..registry
+wrap_module(registry)
 end
 
 module Tpetra
-using Trilinos, CxxWrap, MPI
+using CxxWrap, MPI
+import ..registry
+import ..Teuchos
 
-wrap_module_types(Trilinos.registry)
+wrap_module_types(registry)
 
-CxxWrap.argument_overloads{T1,T2,T3}(t::Type{Trilinos.Teuchos.RCP{Tpetra.Operator{T1,T2,T3}}}) = [Trilinos.Teuchos.RCP{Tpetra.CrsMatrix{T1,T2,T3}}]
-CxxWrap.argument_overloads{T1,T2,T3}(t::Type{Tpetra.MultiVector{T1,T2,T3}}) = [Trilinos.Teuchos.RCP{Tpetra.Vector{T1,T2,T3}},Trilinos.Teuchos.RCP{Tpetra.MultiVector{T1,T2,T3}}]
+CxxWrap.argument_overloads{T1,T2,T3}(t::Type{Teuchos.RCP{Tpetra.Operator{T1,T2,T3}}}) = [Teuchos.RCP{Tpetra.CrsMatrix{T1,T2,T3}}]
+CxxWrap.argument_overloads{T1,T2,T3}(t::Type{Tpetra.MultiVector{T1,T2,T3}}) = [Teuchos.RCP{Tpetra.Vector{T1,T2,T3}},Teuchos.RCP{Tpetra.MultiVector{T1,T2,T3}}]
 
-wrap_module_functions(Trilinos.registry)
+wrap_module_functions(registry)
 
 Base.dot(a::Tpetra.Vector, b::Tpetra.Vector) = Tpetra.dot(a,b)
-Base.dot(a::Trilinos.Teuchos.RCP, b::Trilinos.Teuchos.RCP) = Tpetra.dot(a,b)
+Base.dot(a::Teuchos.RCP, b::Teuchos.RCP) = Tpetra.dot(a,b)
 Tpetra.getGlobalElement(map, idx::UInt64) = Tpetra.getGlobalElement(map, convert(Int, idx))
 
 """
@@ -109,15 +118,21 @@ end
 end
 
 module Thyra
-using Trilinos, CxxWrap, MPI
+using CxxWrap, MPI
+import ..registry
+import ..Teuchos
 
-wrap_module_types(Trilinos.registry)
+wrap_module_types(registry)
 
-CxxWrap.argument_overloads{ScalarT}(t::Type{Trilinos.Teuchos.RCP{LinearOpBase{ScalarT}}}) = [Trilinos.Teuchos.RCP]
-CxxWrap.argument_overloads{ScalarT}(t::Type{Trilinos.Teuchos.RCP{VectorSpaceBase{ScalarT}}}) = [Trilinos.Teuchos.RCP]
+CxxWrap.argument_overloads{ScalarT}(t::Type{Teuchos.RCP{LinearOpBase{ScalarT}}}) = [Teuchos.RCP]
+CxxWrap.argument_overloads{ScalarT}(t::Type{Teuchos.RCP{VectorSpaceBase{ScalarT}}}) = [Teuchos.RCP]
+CxxWrap.argument_overloads{ScalarT}(t::Type{Teuchos.RCP{MultiVectorBase{ScalarT}}}) = [Teuchos.RCP]
+CxxWrap.argument_overloads{ScalarT}(t::Type{Teuchos.RCPPtr{MultiVectorBase{ScalarT}}}) = [Teuchos.RCP]
+CxxWrap.argument_overloads{ScalarT}(t::Type{MultiVectorBase{ScalarT}}) = [Teuchos.RCP]
 
-wrap_module_functions(Trilinos.registry)
+wrap_module_functions(registry)
 
 end
+
 
 end # module

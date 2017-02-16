@@ -25,3 +25,5 @@ b = Tpetra.Vector(Tpetra.getRangeMap(A))
 
 x_th = Thyra.tpetraVector(domainspace, x)
 b_th = Thyra.tpetraVector(rangespace, b)
+
+status = Thyra.solve(lows, Thyra.NOTRANS, b_th, x_th)

@@ -29,6 +29,7 @@ namespace trilinoswrap
 {
 
 jl_datatype_t* g_rcp_type;
+jl_datatype_t* g_ptr_type;
 
 jl_datatype_t* rcp_wrappable()
 {
@@ -117,7 +118,9 @@ void register_teuchos(cxx_wrap::Module& mod)
 
   // RCP
   mod.add_type<Parametric<TypeVar<1>>>("RCP");
+  mod.add_type<Parametric<TypeVar<1>>>("RCPPtr");
   g_rcp_type = mod.get_julia_type("RCP");
+  g_ptr_type = mod.get_julia_type("RCPPtr");
 
   // Comm
   mod.add_abstract<Teuchos::Comm<int>>("Comm", rcp_wrappable())

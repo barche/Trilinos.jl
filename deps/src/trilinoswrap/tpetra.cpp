@@ -186,15 +186,15 @@ void register_tpetra(cxx_wrap::Module& mod)
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("CrsGraph", rcp_wrappable())
     .apply<Tpetra::CrsGraph<int,int>, Tpetra::CrsGraph<int, int64_t>>(WrapCrsGraph());
 
-  auto operator_type = mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("Operator", rcp_wrappable());
+  auto operator_type = mod.add_abstract<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("Operator", rcp_wrappable());
   operator_type.apply<Tpetra::Operator<double,int,int>, Tpetra::Operator<double,int,int64_t>>(WrapTpetraNoOp());
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("CrsMatrix", operator_type.dt())
     .apply<Tpetra::CrsMatrix<double,int,int>, Tpetra::CrsMatrix<double,int,int64_t>>(WrapCrsMatrix());
 
-  mod.add_abstract<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("MultiVector", rcp_wrappable())
-    .apply<Tpetra::MultiVector<double,int,int>, Tpetra::MultiVector<double,int,int64_t>>(WrapMultiVector());
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("Vector", mod.get_julia_type("MultiVector"))
+  auto multivector = mod.add_abstract<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("MultiVector", rcp_wrappable());
+  multivector.apply<Tpetra::MultiVector<double,int,int>, Tpetra::MultiVector<double,int,int64_t>>(WrapMultiVector());
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("Vector", multivector.dt())
     .apply<Tpetra::Vector<double,int,int>, Tpetra::Vector<double,int,int64_t>>(WrapVector());
 
 }

@@ -13,6 +13,23 @@
 
 #include "teuchos.hpp"
 
+namespace cxx_wrap
+{
+
+// heap-allocate solver result
+template<typename T>
+struct ConvertToJulia<Thyra::SolveStatus<T>, false, false, false>
+{
+  inline jl_value_t* operator()(const Thyra::SolveStatus<T>& cpp_obj) const
+  {
+    return create<Thyra::SolveStatus<T>>(cpp_obj);
+  }
+};
+
+template<> struct IsBits<Thyra::EOpTransp> : std::true_type {};
+
+}
+
 namespace trilinoswrap
 {
 
@@ -45,10 +62,20 @@ struct WrapTpetraLinOp
 template<typename T>
 struct extract_scalar_type;
 
-template<template<typename> class T, typename Scalar>
-struct extract_scalar_type<T<Scalar>>
+template<template<typename, typename...> class T, typename Scalar, typename... OtherTs>
+struct extract_scalar_type<T<Scalar, OtherTs...>>
 {
   typedef Scalar type;
+};
+
+struct WrapSolveStatus
+{
+  template<typename TypeWrapperT>
+  void operator()(TypeWrapperT&& wrapped)
+  {
+    typedef typename TypeWrapperT::type WrappedT;
+    typedef typename extract_scalar_type<WrappedT>::type Scalar;
+  }
 };
 
 struct WrapLOWSFactory
@@ -66,6 +93,22 @@ struct WrapLOWSFactory
     {
       Thyra::initializeOp(lowsFactory, fwdOp, Op.ptr());
     });
+    wrapped.module().method("solve", Thyra::solve<Scalar>);
+    wrapped.module().method("solve", [] (const Thyra::LinearOpWithSolveBase<Scalar>& lows, const Thyra::EOpTransp trans, const Thyra::MultiVectorBase<Scalar>& rhs, Teuchos::Ptr<Thyra::MultiVectorBase<Scalar>> x)
+    {
+      return Thyra::solve(lows, trans, rhs, x);
+    });
+  }
+};
+
+struct WrapTpetraVector
+{
+  template<typename TypeWrapperT>
+  void operator()(TypeWrapperT&& wrapped)
+  {
+    typedef typename TypeWrapperT::type WrappedT;
+    typedef typename extract_scalar_type<WrappedT>::type Scalar;
+    wrapped.module().method("convert", convert<WrappedT, Thyra::MultiVectorBase<Scalar>>);
   }
 };
 
@@ -82,19 +125,22 @@ void register_thyra(cxx_wrap::Module& mod)
 {
   using namespace cxx_wrap;
 
-  auto vecspace_base = mod.add_type<Parametric<TypeVar<1>>>("VectorSpaceBase", rcp_wrappable())
+  auto vecspace_base = mod.add_abstract<Parametric<TypeVar<1>>>("VectorSpaceBase", rcp_wrappable())
     .apply<Thyra::VectorSpaceBase<double>, Thyra::VectorSpaceBase<float>>(WrapNoOp());
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("TpetraVectorSpace", vecspace_base.dt())
     .apply<Thyra::TpetraVectorSpace<double,int,int,KokkosClassic::DefaultNode::DefaultNodeType>, Thyra::TpetraVectorSpace<double,int,int64_t,KokkosClassic::DefaultNode::DefaultNodeType>>(WrapNoOp());
 
-  auto vector_base = mod.add_type<Parametric<TypeVar<1>>>("VectorBase", rcp_wrappable());
+  auto multi_vector_base = mod.add_abstract<Parametric<TypeVar<1>>>("MultiVectorBase", rcp_wrappable());
+  multi_vector_base.apply<Thyra::MultiVectorBase<double>, Thyra::MultiVectorBase<float>>(WrapNoOp());
+
+  auto vector_base = mod.add_abstract<Parametric<TypeVar<1>>>("VectorBase", multi_vector_base.dt());
   vector_base.apply<Thyra::VectorBase<double>, Thyra::VectorBase<float>>(WrapNoOp());
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("TpetraVector", vector_base.dt())
-    .apply<Thyra::TpetraVector<double,int,int,KokkosClassic::DefaultNode::DefaultNodeType>, Thyra::TpetraVector<double,int,int64_t,KokkosClassic::DefaultNode::DefaultNodeType>>(WrapNoOp());
+    .apply<Thyra::TpetraVector<double,int,int,KokkosClassic::DefaultNode::DefaultNodeType>, Thyra::TpetraVector<double,int,int64_t,KokkosClassic::DefaultNode::DefaultNodeType>>(WrapTpetraVector());
 
-  auto linop_base = mod.add_type<Parametric<TypeVar<1>>>("LinearOpBase", rcp_wrappable())
+  auto linop_base = mod.add_abstract<Parametric<TypeVar<1>>>("LinearOpBase", rcp_wrappable())
     .apply<Thyra::LinearOpBase<double>, Thyra::LinearOpBase<float>>(WrapNoOp());
 
   mod.add_type<Parametric<TypeVar<1>>>("LinearOpWithSolveBase", rcp_wrappable())
@@ -102,6 +148,18 @@ void register_thyra(cxx_wrap::Module& mod)
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("TpetraLinearOp", linop_base.dt())
     .apply<Thyra::TpetraLinearOp<double,int,int>, Thyra::TpetraLinearOp<double,int,int64_t>>(WrapTpetraLinOp());
+
+  mod.add_bits<Thyra::EOpTransp>("EOpTransp");
+  mod.set_const("NOTRANS", Thyra::NOTRANS);
+  mod.set_const("CONJ", Thyra::CONJ);
+  mod.set_const("TRANS", Thyra::TRANS);
+  mod.set_const("CONJTRANS", Thyra::CONJTRANS);
+
+  mod.add_type<Parametric<TypeVar<1>>>("SolveStatus")
+    .apply<Thyra::SolveStatus<double>, Thyra::SolveStatus<float>>(WrapSolveStatus());
+
+  mod.add_type<Parametric<TypeVar<1>>>("SolveCriteria", rcp_wrappable())
+    .apply<Thyra::SolveCriteria<double>, Thyra::SolveCriteria<float>>(WrapNoOp());
 
   mod.add_type<Parametric<TypeVar<1>>>("LinearOpWithSolveFactoryBase", rcp_wrappable())
     .apply<Thyra::LinearOpWithSolveFactoryBase<double>, Thyra::LinearOpWithSolveFactoryBase<float>>(WrapLOWSFactory());
