@@ -1,5 +1,5 @@
-#ifndef TRILINOS_JL_RCP_HPP
-#define TRILINOS_JL_RCP_HPP
+#ifndef TRILINOS_JL_TEUCHOS_HPP
+#define TRILINOS_JL_TEUCHOS_HPP
 
 #include <array.hpp>
 #include <cxx_wrap.hpp>

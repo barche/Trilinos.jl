@@ -11,6 +11,7 @@
 #include <Thyra_VectorBase.hpp>
 #include <Thyra_VectorStdOps.hpp>
 
+#include "kokkos.hpp"
 #include "teuchos.hpp"
 
 namespace cxx_wrap
@@ -125,29 +126,29 @@ void register_thyra(cxx_wrap::Module& mod)
 {
   using namespace cxx_wrap;
 
-  auto vecspace_base = mod.add_abstract<Parametric<TypeVar<1>>>("VectorSpaceBase", rcp_wrappable())
-    .apply<Thyra::VectorSpaceBase<double>, Thyra::VectorSpaceBase<float>>(WrapNoOp());
+  auto vecspace_base = mod.add_abstract<Parametric<TypeVar<1>>>("VectorSpaceBase", rcp_wrappable());
+  vecspace_base.apply_combination<Thyra::VectorSpaceBase, scalars_t>(WrapNoOp());
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("TpetraVectorSpace", vecspace_base.dt())
-    .apply<Thyra::TpetraVectorSpace<double,int,int,KokkosClassic::DefaultNode::DefaultNodeType>, Thyra::TpetraVectorSpace<double,int,int64_t,KokkosClassic::DefaultNode::DefaultNodeType>>(WrapNoOp());
+    .apply_combination<Thyra::TpetraVectorSpace, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapNoOp());
 
   auto multi_vector_base = mod.add_abstract<Parametric<TypeVar<1>>>("MultiVectorBase", rcp_wrappable());
-  multi_vector_base.apply<Thyra::MultiVectorBase<double>, Thyra::MultiVectorBase<float>>(WrapNoOp());
+  multi_vector_base.apply_combination<Thyra::MultiVectorBase, scalars_t>(WrapNoOp());
 
   auto vector_base = mod.add_abstract<Parametric<TypeVar<1>>>("VectorBase", multi_vector_base.dt());
-  vector_base.apply<Thyra::VectorBase<double>, Thyra::VectorBase<float>>(WrapNoOp());
+  vector_base.apply_combination<Thyra::VectorBase, scalars_t>(WrapNoOp());
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("TpetraVector", vector_base.dt())
-    .apply<Thyra::TpetraVector<double,int,int,KokkosClassic::DefaultNode::DefaultNodeType>, Thyra::TpetraVector<double,int,int64_t,KokkosClassic::DefaultNode::DefaultNodeType>>(WrapTpetraVector());
+    .apply_combination<Thyra::TpetraVector, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapTpetraVector());
 
-  auto linop_base = mod.add_abstract<Parametric<TypeVar<1>>>("LinearOpBase", rcp_wrappable())
-    .apply<Thyra::LinearOpBase<double>, Thyra::LinearOpBase<float>>(WrapNoOp());
+  auto linop_base = mod.add_abstract<Parametric<TypeVar<1>>>("LinearOpBase", rcp_wrappable());
+  linop_base.apply_combination<Thyra::LinearOpBase, scalars_t>(WrapNoOp());
 
   mod.add_type<Parametric<TypeVar<1>>>("LinearOpWithSolveBase", rcp_wrappable())
-    .apply<Thyra::LinearOpWithSolveBase<double>, Thyra::LinearOpWithSolveBase<float>>(WrapNoOp());
+    .apply_combination<Thyra::LinearOpWithSolveBase, scalars_t>(WrapNoOp());
 
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("TpetraLinearOp", linop_base.dt())
-    .apply<Thyra::TpetraLinearOp<double,int,int>, Thyra::TpetraLinearOp<double,int,int64_t>>(WrapTpetraLinOp());
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("TpetraLinearOp", linop_base.dt())
+    .apply_combination<Thyra::TpetraLinearOp, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapTpetraLinOp());
 
   mod.add_bits<Thyra::EOpTransp>("EOpTransp");
   mod.set_const("NOTRANS", Thyra::NOTRANS);
@@ -156,13 +157,13 @@ void register_thyra(cxx_wrap::Module& mod)
   mod.set_const("CONJTRANS", Thyra::CONJTRANS);
 
   mod.add_type<Parametric<TypeVar<1>>>("SolveStatus")
-    .apply<Thyra::SolveStatus<double>, Thyra::SolveStatus<float>>(WrapSolveStatus());
+    .apply_combination<Thyra::SolveStatus, scalars_t>(WrapSolveStatus());
 
   mod.add_type<Parametric<TypeVar<1>>>("SolveCriteria", rcp_wrappable())
-    .apply<Thyra::SolveCriteria<double>, Thyra::SolveCriteria<float>>(WrapNoOp());
+    .apply_combination<Thyra::SolveCriteria, scalars_t>(WrapNoOp());
 
   mod.add_type<Parametric<TypeVar<1>>>("LinearOpWithSolveFactoryBase", rcp_wrappable())
-    .apply<Thyra::LinearOpWithSolveFactoryBase<double>, Thyra::LinearOpWithSolveFactoryBase<float>>(WrapLOWSFactory());
+    .apply_combination<Thyra::LinearOpWithSolveFactoryBase, scalars_t>(WrapLOWSFactory());
 }
 
 } // namespace trilinoswrap

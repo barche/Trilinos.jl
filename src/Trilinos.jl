@@ -1,5 +1,6 @@
 module Trilinos
 
+export Kokkos
 export Teuchos
 export Tpetra
 export Thyra
@@ -76,17 +77,20 @@ module Tpetra
 using CxxWrap, MPI
 import ..registry
 import ..Teuchos
+import ..Kokkos
 
 wrap_module_types(registry)
 
-CxxWrap.argument_overloads{T1,T2,T3}(t::Type{Teuchos.RCP{Tpetra.Operator{T1,T2,T3}}}) = [Teuchos.RCP{Tpetra.CrsMatrix{T1,T2,T3}}]
-CxxWrap.argument_overloads{T1,T2,T3}(t::Type{Tpetra.MultiVector{T1,T2,T3}}) = [Teuchos.RCP{Tpetra.Vector{T1,T2,T3}},Teuchos.RCP{Tpetra.MultiVector{T1,T2,T3}}]
+CxxWrap.argument_overloads{T1,T2,T3,T4}(t::Type{Teuchos.RCP{Tpetra.Operator{T1,T2,T3,T4}}}) = [Teuchos.RCP{Tpetra.CrsMatrix{T1,T2,T3,T4}}]
+CxxWrap.argument_overloads{T1,T2,T3,T4}(t::Type{Tpetra.MultiVector{T1,T2,T3,T4}}) = [Teuchos.RCP{Tpetra.Vector{T1,T2,T3,T4}},Teuchos.RCP{Tpetra.MultiVector{T1,T2,T3,T4}}]
 
 wrap_module_functions(registry)
 
 Base.dot(a::Tpetra.Vector, b::Tpetra.Vector) = Tpetra.dot(a,b)
 Base.dot(a::Teuchos.RCP, b::Teuchos.RCP) = Tpetra.dot(a,b)
-Tpetra.getGlobalElement(map, idx::UInt64) = Tpetra.getGlobalElement(map, convert(Int, idx))
+
+Map(num_indices::Integer, index_base::Integer, comm::Teuchos.RCP{Teuchos.Comm}) = Map(num_indices, index_base, comm, Kokkos.KokkosSerialWrapperNode)
+getGlobalElement(map, idx::UInt64) = getGlobalElement(map, convert(Int, idx))
 
 """
 Construct a Trilinos sparse matrix from a SparseMatrixCSC. Note that the resulting matrix is the transpose of the Julia matrix, since Trilinos is row-based.

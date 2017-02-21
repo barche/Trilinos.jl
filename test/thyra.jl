@@ -16,6 +16,7 @@ A = Tpetra.CrsMatrix(spdiagm((ones(n),), (0,)),rowmap)
 
 
 rangespace = Thyra.tpetraVectorSpace(Tpetra.getRangeMap(A))
+@show typeof(rangespace)
 domainspace = Thyra.tpetraVectorSpace(Tpetra.getDomainMap(A))
 A_thyra = Thyra.tpetraLinearOp(rangespace, domainspace, A)
 Thyra.initializeOp(lows_factory, A_thyra, lows)

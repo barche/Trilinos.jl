@@ -4,12 +4,13 @@ cmake_minimum_required(VERSION 2.8.12)
 set(CMAKE_MACOSX_RPATH 1)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 add_definitions(-DJULIA_ENABLE_THREADING)
 
 find_package(Trilinos)
 find_package(CxxWrap)
 find_package(Eigen3)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ${Trilinos_CXX_COMPILER_FLAGS}")
 
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${CxxWrap_DIR}/../;${Trilinos_LIBRARY_DIRS}")
 
