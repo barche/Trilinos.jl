@@ -14,8 +14,20 @@ extern void register_thyra(cxx_wrap::Module& mod);
 JULIA_CPP_MODULE_BEGIN(registry)
   using namespace cxx_wrap;
 
-  trilinoswrap::register_kokkos(registry.create_module("Kokkos"));
-  trilinoswrap::register_teuchos(registry.create_module("Teuchos"));
-  trilinoswrap::register_tpetra(registry.create_module("Tpetra"));
-  trilinoswrap::register_thyra(registry.create_module("Thyra"));
+  if(cxx_wrap::symbol_name(jl_current_module->name) == "Kokkos")
+  {
+    trilinoswrap::register_kokkos(registry.create_module("Kokkos"));
+  }
+  if(cxx_wrap::symbol_name(jl_current_module->name) == "Teuchos")
+  {
+    trilinoswrap::register_teuchos(registry.create_module("Teuchos"));
+  }
+  if(cxx_wrap::symbol_name(jl_current_module->name) == "Tpetra")
+  {
+    trilinoswrap::register_tpetra(registry.create_module("Tpetra"));
+  }
+  if(cxx_wrap::symbol_name(jl_current_module->name) == "Thyra")
+  {
+    trilinoswrap::register_thyra(registry.create_module("Thyra"));
+  }
 JULIA_CPP_MODULE_END

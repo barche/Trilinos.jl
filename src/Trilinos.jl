@@ -29,12 +29,13 @@ CxxWrap.argument_overloads{T <: RCPAssociative}(t::Type{T}) = [Trilinos.Teuchos.
   CxxWrap.argument_overloads(t::Type{UInt64}) = [Int64]
 end
 
-registry = load_modules(_l_trilinos_wrap)
-
 module Teuchos
 using CxxWrap, MPI
-import ..registry
+import .._l_trilinos_wrap
+import ..RCPWrappable
+import ..RCPAssociative
 
+registry = load_modules(_l_trilinos_wrap)
 wrap_module_types(registry)
 
 CxxWrap.argument_overloads{T}(t::Type{RCPPtr{T}}) = [RCP{T}]
@@ -68,16 +69,24 @@ Base.setindex!(pl::RCP{ParameterList}, v, key) = Base.setindex!(convert(Paramete
 end
 
 module Kokkos
-using CxxWrap, MPI
-import ..registry
-wrap_module(registry)
+  using CxxWrap, MPI
+  import .._l_trilinos_wrap
+  import ..RCPWrappable
+  import ..RCPAssociative
+
+  registry = load_modules(_l_trilinos_wrap)
+  wrap_module(registry)
 end
 
 module Tpetra
 using CxxWrap, MPI
-import ..registry
+import .._l_trilinos_wrap
+import ..RCPWrappable
+import ..RCPAssociative
 import ..Teuchos
 import ..Kokkos
+
+registry = load_modules(_l_trilinos_wrap)
 
 wrap_module_types(registry)
 
@@ -89,7 +98,7 @@ wrap_module_functions(registry)
 Base.dot(a::Tpetra.Vector, b::Tpetra.Vector) = Tpetra.dot(a,b)
 Base.dot(a::Teuchos.RCP, b::Teuchos.RCP) = Tpetra.dot(a,b)
 
-Map(num_indices::Integer, index_base::Integer, comm::Teuchos.RCP{Teuchos.Comm}) = Map(num_indices, index_base, comm, Kokkos.KokkosSerialWrapperNode)
+Map(num_indices::Integer, index_base::Integer, comm::Teuchos.RCP{Teuchos.Comm}) = Map(num_indices, index_base, comm, Kokkos.default_node_type())
 getGlobalElement(map, idx::UInt64) = getGlobalElement(map, convert(Int, idx))
 
 """
@@ -123,8 +132,12 @@ end
 
 module Thyra
 using CxxWrap, MPI
-import ..registry
+import .._l_trilinos_wrap
+import ..RCPWrappable
+import ..RCPAssociative
 import ..Teuchos
+
+registry = load_modules(_l_trilinos_wrap)
 
 wrap_module_types(registry)
 

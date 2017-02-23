@@ -6,7 +6,7 @@ lows_factory = Thyra.BelosLinearOpWithSolveFactory(Float64)
 pl = Teuchos.ParameterList()
 Thyra.setParameterList(lows_factory, pl)
 
-Thyra.setVerbLevel(lows_factory, Teuchos.VERB_EXTREME)
+Thyra.setVerbLevel(lows_factory, Teuchos.VERB_NONE)
 lows = Thyra.createOp(lows_factory)
 
 comm = Teuchos.MpiComm(MPI.CComm(MPI.COMM_WORLD))
@@ -21,7 +21,7 @@ domainspace = Thyra.tpetraVectorSpace(Tpetra.getDomainMap(A))
 A_thyra = Thyra.tpetraLinearOp(rangespace, domainspace, A)
 Thyra.initializeOp(lows_factory, A_thyra, lows)
 
-@show x = Tpetra.Vector(Tpetra.getDomainMap(A))
+x = Tpetra.Vector(Tpetra.getDomainMap(A))
 b = Tpetra.Vector(Tpetra.getRangeMap(A))
 
 x_th = Thyra.tpetraVector(domainspace, x)
