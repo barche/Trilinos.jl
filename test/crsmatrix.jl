@@ -15,7 +15,6 @@ A = spdiagm((2*ones(n-1),ones(n),3*ones(n-1)), (-1,0,1))
 
 rowmap = Tpetra.Map(n, 0, comm)
 A_crs = Tpetra.CrsMatrix(A,rowmap)
-@show typeof(A_crs)
 
 @test sqrt(sum(nonzeros(A).^2)) ≈ Tpetra.getFrobeniusNorm(A_crs)
 
