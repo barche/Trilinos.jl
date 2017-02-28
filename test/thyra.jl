@@ -13,7 +13,6 @@ comm = Teuchos.MpiComm(MPI.CComm(MPI.COMM_WORLD))
 const n = 20
 rowmap = Tpetra.Map(n, 0, comm)
 A = Tpetra.CrsMatrix(spdiagm((ones(n),), (0,)),rowmap)
-@show typeof(A)
 
 rangespace = Thyra.tpetraVectorSpace(Tpetra.getRangeMap(A))
 domainspace = Thyra.tpetraVectorSpace(Tpetra.getDomainMap(A))
@@ -22,9 +21,6 @@ Thyra.initializeOp(lows_factory, A_thyra, lows)
 
 x = Tpetra.Vector(Tpetra.getDomainMap(A))
 b = Tpetra.Vector(Tpetra.getRangeMap(A))
-
-@show typeof(x)
-@show typeof(b)
 
 x_th = Thyra.tpetraVector(domainspace, x)
 b_th = Thyra.tpetraVector(rangespace, b)
