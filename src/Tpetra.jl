@@ -48,4 +48,32 @@ function CrsMatrix{ScalarT, GlobalOrdinalT}(A::SparseMatrixCSC{ScalarT, GlobalOr
   return tpetra_matrix
 end
 
+typealias VectorUnion{ST,LT,GT,NT} Union{Teuchos.RCP{Vector{ST,LT,GT,NT}}, Vector{ST,LT,GT,NT}}
+typealias MultiVectorUnion{ST,LT,GT,NT} Union{Teuchos.RCP{MultiVector{ST,LT,GT,NT}}, MultiVector{ST,LT,GT,NT}}
+
+"""
+Gets an AbstractArray-compatible device view of the whole multivector. Calls getLocalView internally.
+"""
+device_view{ST,LT,GT,NT}(mv::MultiVectorUnion{ST,LT,GT,NT}) = _get_view(mv, device_view_type(mv))
+
+"""
+Gets an AbstractArray-compatible host view of the whole multivector. Calls getLocalView internally.
+"""
+host_view{ST,LT,GT,NT}(mv::MultiVectorUnion{ST,LT,GT,NT}) = _get_view(mv, host_view_type(mv))
+
+"""
+Gets an AbstractArray-compatible device view of the whole vector. Calls getLocalView internally.
+"""
+device_view{ST,LT,GT,NT}(v::VectorUnion{ST,LT,GT,NT}) = _get_view(v, device_view_type(v))
+
+"""
+Gets an AbstractArray-compatible host view of the whole vector. Calls getLocalView internally.
+"""
+host_view{ST,LT,GT,NT}(v::VectorUnion{ST,LT,GT,NT}) = _get_view(v, host_view_type(v))
+
+
+#internal methods
+_get_view{ST,LT,GT,NT}(mv::MultiVectorUnion{ST,LT,GT,NT}, view_type) = Kokkos.View(ST, Val{2}, getLocalView(view_type, mv))
+_get_view{ST,LT,GT,NT}(mv::VectorUnion{ST,LT,GT,NT}, view_type) = Kokkos.View(ST, Val{1}, getLocalView(view_type, mv))
+
 end

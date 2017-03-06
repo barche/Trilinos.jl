@@ -129,7 +129,7 @@ void register_thyra(cxx_wrap::Module& mod)
   auto vecspace_base = mod.add_abstract<Parametric<TypeVar<1>>>("VectorSpaceBase", rcp_wrappable());
   vecspace_base.apply_combination<Thyra::VectorSpaceBase, scalars_t>(WrapNoOp());
 
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("TpetraVectorSpace", vecspace_base.dt())
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>, ParameterList<TypeVar<1>>>("TpetraVectorSpace", vecspace_base.dt())
     .apply_combination<Thyra::TpetraVectorSpace, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapNoOp());
 
   auto multi_vector_base = mod.add_abstract<Parametric<TypeVar<1>>>("MultiVectorBase", rcp_wrappable());
@@ -138,7 +138,7 @@ void register_thyra(cxx_wrap::Module& mod)
   auto vector_base = mod.add_abstract<Parametric<TypeVar<1>>>("VectorBase", multi_vector_base.dt());
   vector_base.apply_combination<Thyra::VectorBase, scalars_t>(WrapNoOp());
 
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("TpetraVector", vector_base.dt())
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>, ParameterList<TypeVar<1>>>("TpetraVector", vector_base.dt())
     .apply_combination<Thyra::TpetraVector, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapTpetraVector());
 
   auto linop_base = mod.add_abstract<Parametric<TypeVar<1>>>("LinearOpBase", rcp_wrappable());
@@ -147,7 +147,7 @@ void register_thyra(cxx_wrap::Module& mod)
   mod.add_type<Parametric<TypeVar<1>>>("LinearOpWithSolveBase", rcp_wrappable())
     .apply_combination<Thyra::LinearOpWithSolveBase, scalars_t>(WrapNoOp());
 
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("TpetraLinearOp", linop_base.dt())
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>, ParameterList<TypeVar<1>>>("TpetraLinearOp", linop_base.dt())
     .apply_combination<Thyra::TpetraLinearOp, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapTpetraLinOp());
 
   mod.add_bits<Thyra::EOpTransp>("EOpTransp");

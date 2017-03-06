@@ -135,12 +135,26 @@ struct WrapMultiVector
     typedef typename TypeWrapperT::type WrappedT;
     typedef typename WrappedT::scalar_type scalar_type;
     typedef typename WrappedT::global_ordinal_type global_ordinal_type;
+    typedef typename WrappedT::map_type map_type;
+    typedef typename WrappedT::dot_type dot_type;
 
     wrapped.method("randomize", static_cast<void (WrappedT::*)()>(&WrappedT::randomize));
     wrapped.method("scale", static_cast<void (WrappedT::*)(const scalar_type&)>(&WrappedT::scale));
     wrapped.method("scale", static_cast<void (WrappedT::*)(const scalar_type&, const WrappedT&)>(&WrappedT::scale));
     wrapped.method("update", static_cast<void (WrappedT::*)(const scalar_type&, const WrappedT&, const scalar_type&)>(&WrappedT::update));
     wrapped.method("update", static_cast<void (WrappedT::*)(const scalar_type&, const WrappedT&, const scalar_type&, const WrappedT&, const scalar_type&)>(&WrappedT::update));
+    wrapped.method("putScalar", static_cast<void (WrappedT::*)(const scalar_type&)>(&WrappedT::putScalar));
+    wrapped.method("dot", static_cast<void (WrappedT::*)(const WrappedT&, const Teuchos::ArrayView<dot_type>&) const>(&WrappedT::dot));
+
+    wrapped.module().method("MultiVector", [] (const Teuchos::RCP<const map_type>& map, const std::size_t num_vecs) { return Teuchos::rcp(new WrappedT(map, num_vecs)); });
+
+    typedef typename WrappedT::dual_view_type dual_view_type;
+    typedef typename dual_view_type::t_host host_view_type;
+    typedef typename dual_view_type::t_dev device_view_type;
+    wrapped.module().method("host_view_type", [] (WrappedT& vec) { return cxx_wrap::julia_type<host_view_type>(); });
+    wrapped.module().method("device_view_type", [] (WrappedT& vec) { return cxx_wrap::julia_type<device_view_type>(); });
+    wrapped.module().method("getLocalView", [] (cxx_wrap::SingletonType<host_view_type>, WrappedT& vec) {return cxx_wrap::create<host_view_type>(vec.template getLocalView<host_view_type>()); } );
+    wrapped.module().method("getLocalView", [] (cxx_wrap::SingletonType<device_view_type>, WrappedT& vec) {return cxx_wrap::create<device_view_type>(vec.template getLocalView<device_view_type>()); } );
   }
 };
 

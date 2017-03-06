@@ -34,5 +34,10 @@ pl2["param1"] = "test"
 @test Teuchos.isSublist(pl, "child")
 @test pl["child"]["param1"] == "test"
 
+pl2_ref = pl["child"]
+pl2_ref["param1"] = "test2"
+
+@test pl["child"]["param1"] == "test2"
+
 display(pl[])
 println()

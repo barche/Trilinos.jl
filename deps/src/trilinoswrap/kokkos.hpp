@@ -12,13 +12,17 @@ namespace trilinoswrap
 typedef cxx_wrap::ParameterList<int> local_ordinals_t;
 typedef cxx_wrap::ParameterList<int, int64_t> global_ordinals_t;
 typedef cxx_wrap::ParameterList<double> scalars_t;
+typedef cxx_wrap::ParameterList<double**> arrays_t;
 
 #if defined(HAVE_TPETRA_INST_SERIAL) && !defined(HAVE_TPETRA_INST_OPENMP)
   typedef cxx_wrap::ParameterList<Kokkos::Compat::KokkosSerialWrapperNode> kokkos_nodes_t;
+  typedef cxx_wrap::ParameterList<Kokkos::Serial> kokkos_devices_t;
 #elif !defined(HAVE_TPETRA_INST_SERIAL) && defined(HAVE_TPETRA_INST_OPENMP)
   typedef cxx_wrap::ParameterList<Kokkos::Compat::KokkosOpenMPWrapperNode> kokkos_nodes_t;
+  typedef cxx_wrap::ParameterList<Kokkos::OpenMP> kokkos_devices_t;
 #elif defined(HAVE_TPETRA_INST_SERIAL) && defined(HAVE_TPETRA_INST_OPENMP)
   typedef cxx_wrap::ParameterList<Kokkos::Compat::KokkosSerialWrapperNode, Kokkos::Compat::KokkosOpenMPWrapperNode> kokkos_nodes_t;
+  typedef cxx_wrap::ParameterList<Kokkos::Serial, Kokkos::OpenMP> kokkos_devices_t;
 #endif
 
 } // namespace trilinoswrap
