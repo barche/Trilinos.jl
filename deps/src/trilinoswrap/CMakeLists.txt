@@ -17,6 +17,7 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${CxxWrap_DIR}/../;${Trilin
 include_directories(${Trilinos_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR})
 
 add_library(trilinoswrap SHARED
+  benchmark.cpp
   module.cpp
   kokkos.cpp
   teuchos.cpp

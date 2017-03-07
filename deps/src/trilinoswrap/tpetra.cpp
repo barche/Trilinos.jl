@@ -151,8 +151,8 @@ struct WrapMultiVector
     typedef typename WrappedT::dual_view_type dual_view_type;
     typedef typename dual_view_type::t_host host_view_type;
     typedef typename dual_view_type::t_dev device_view_type;
-    wrapped.module().method("host_view_type", [] (WrappedT& vec) { return cxx_wrap::julia_type<host_view_type>(); });
-    wrapped.module().method("device_view_type", [] (WrappedT& vec) { return cxx_wrap::julia_type<device_view_type>(); });
+    wrapped.module().method("host_view_type", [] (WrappedT& vec) { return cxx_wrap::SingletonType<host_view_type>(); });
+    wrapped.module().method("device_view_type", [] (WrappedT& vec) { return cxx_wrap::SingletonType<device_view_type>(); });
     wrapped.module().method("getLocalView", [] (cxx_wrap::SingletonType<host_view_type>, WrappedT& vec) {return cxx_wrap::create<host_view_type>(vec.template getLocalView<host_view_type>()); } );
     wrapped.module().method("getLocalView", [] (cxx_wrap::SingletonType<device_view_type>, WrappedT& vec) {return cxx_wrap::create<device_view_type>(vec.template getLocalView<device_view_type>()); } );
   }

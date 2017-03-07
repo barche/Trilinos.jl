@@ -76,4 +76,16 @@ host_view{ST,LT,GT,NT}(v::VectorUnion{ST,LT,GT,NT}) = _get_view(v, host_view_typ
 _get_view{ST,LT,GT,NT}(mv::MultiVectorUnion{ST,LT,GT,NT}, view_type) = Kokkos.View(ST, Val{2}, getLocalView(view_type, mv))
 _get_view{ST,LT,GT,NT}(mv::VectorUnion{ST,LT,GT,NT}, view_type) = Kokkos.View(ST, Val{1}, getLocalView(view_type, mv))
 
+typealias PtrViewTypes{ArrayT,DeviceT} Union{Type{Kokkos.View3{ArrayT, Kokkos.LayoutLeft, DeviceT}}, Type{Kokkos.View4{ArrayT, Kokkos.LayoutLeft, DeviceT, Void}}}
+function _get_view{ST,LT,GT,NT,ArrayT,DeviceT}(mv::MultiVectorUnion{ST,LT,GT,NT}, view_type::PtrViewTypes{ArrayT,DeviceT})
+  localview = getLocalView(view_type, mv)
+  sizes = (Int(Kokkos.dimension(localview,0)),Int(Kokkos.dimension(localview,1)))
+  return Kokkos.View(ST, Val{2}, Kokkos.PtrWrapper(Kokkos.ptr_on_device(localview), sizes))
+ end
+function _get_view{ST,LT,GT,NT,ArrayT,DeviceT}(mv::VectorUnion{ST,LT,GT,NT}, view_type::PtrViewTypes{ArrayT,DeviceT})
+  localview = getLocalView(view_type, mv)
+  sizes = (Int(Kokkos.dimension(localview,0)),)
+  return Kokkos.View(ST, Val{1}, Kokkos.PtrWrapper(Kokkos.ptr_on_device(localview), sizes))
+end
+
 end

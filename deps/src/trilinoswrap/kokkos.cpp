@@ -19,6 +19,7 @@ struct WrapView
     typedef typename WrappedT::value_type ScalarT;
     wrapped.method("dimension", &WrappedT::template dimension<int_t>);
     wrapped.method(&WrappedT::template operator()<int_t, int_t>);
+    wrapped.method("ptr_on_device", &WrappedT::ptr_on_device);
   }
 };
 

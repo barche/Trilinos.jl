@@ -26,8 +26,11 @@ mv = Tpetra.MultiVector(rowmap, mv_cols)
 Tpetra.putScalar(v, 1)
 Tpetra.putScalar(mv, 2)
 
-device_vt = Tpetra.device_view_type(v)
-host_vt = Tpetra.host_view_type(v)
+@show device_vt = Tpetra.device_view_type(v)
+@show host_vt = Tpetra.host_view_type(v)
+
+@show typeof(device_vt)
+@show typeof(host_vt)
 
 device_mvt = Tpetra.device_view_type(mv)
 host_mvt = Tpetra.host_view_type(mv)
@@ -71,6 +74,54 @@ if my_rank == 0
   println()
 end
 
+function benchmark_fill_lowlevel(rowmap, a)
+  num_my_elements = Int(Tpetra.getNodeNumElements(rowmap))
+  av = Tpetra.getLocalView(Tpetra.device_view_type(a), a)
+  for i in 0:(num_my_elements-1)
+    unsafe_store!(av(i,0), i)
+  end
+end
+
+function benchmark_fill_abstractarray(rowmap, a)
+  num_my_elements = Int(Tpetra.getNodeNumElements(rowmap))
+  av = Tpetra.device_view(a)
+  for i in 1:num_my_elements
+    @inbounds av[i] = i
+  end
+end
+
+const bench_size = 1000000
+benchmap = Tpetra.Map(bench_size, 0, comm)
+benchvec = Tpetra.Vector(benchmap)
+benchview = Tpetra.device_view(benchvec)
+n_my_elms = Int(Tpetra.getNodeNumElements(benchmap))
+
+Tpetra.putScalar(benchvec, 5.0)
+println("lowlevel timings:")
+@time benchmark_fill_lowlevel(benchmap, benchvec)
+@time benchmark_fill_lowlevel(benchmap, benchvec)
+@time benchmark_fill_lowlevel(benchmap, benchvec)
+
+@test benchview[1] == 0
+@test benchview[end] == n_my_elms-1
+
+Tpetra.putScalar(benchvec, 5.0)
+println("abstractarray timings:")
+@time benchmark_fill_abstractarray(benchmap, benchvec)
+@time benchmark_fill_abstractarray(benchmap, benchvec)
+@time benchmark_fill_abstractarray(benchmap, benchvec)
+
+@test benchview[1] == 1
+@test benchview[end] == n_my_elms
+
+Tpetra.putScalar(benchvec, 5.0)
+println("C++ timings:")
+@time Trilinos.Benchmark.vector_fill(benchmap, benchvec)
+@time Trilinos.Benchmark.vector_fill(benchmap, benchvec)
+@time Trilinos.Benchmark.vector_fill(benchmap, benchvec)
+
+@test benchview[1] == 0
+@test benchview[end] == n_my_elms-1
 
 if !isdefined(:intesting)
   MPI.Finalize()

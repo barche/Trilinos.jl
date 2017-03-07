@@ -33,6 +33,7 @@ include("Teuchos.jl")
 include("Kokkos.jl")
 include("Tpetra.jl")
 include("Thyra.jl")
+include("Benchmark.jl")
 
 
 end # module
