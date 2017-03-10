@@ -36,21 +36,6 @@ jl_datatype_t* rcp_wrappable()
   return cxx_wrap::julia_type("RCPWrappable", "Trilinos");
 }
 
-struct WrapArrayView
-{
-  template<typename TypeWrapperT>
-  void operator()(TypeWrapperT&& wrapped)
-  {
-    typedef typename TypeWrapperT::type WrappedT;
-    typedef typename WrappedT::value_type value_type;
-    wrapped.method("size", &WrappedT::size);
-    wrapped.module().method("ArrayView", [](cxx_wrap::ArrayRef<value_type, 1> arr)
-    {
-      return cxx_wrap::create<WrappedT>(arr.data(), arr.size());
-    });
-  }
-};
-
 template<typename T>
 struct AddSetMethod
 {
@@ -133,9 +118,6 @@ void register_teuchos(cxx_wrap::Module& mod)
     return teuchos_comm;
   });
 
-  mod.add_type<Parametric<TypeVar<1>>>("ArrayView")
-    .apply<Teuchos::ArrayView<double>, Teuchos::ArrayView<int>, Teuchos::ArrayView<int64_t>>(WrapArrayView());
-
   mod.add_bits<Teuchos::ETransp>("ETransp");
   mod.set_const("NO_TRANS", Teuchos::NO_TRANS);
   mod.set_const("TRANS", Teuchos::TRANS);
@@ -175,6 +157,10 @@ void register_teuchos(cxx_wrap::Module& mod)
     JL_GC_POP();
     return (jl_value_t*)keys.wrapped();
   });
+
+  mod.method("size", [] (const Teuchos::ArrayView<double>& v) { return v.size(); });
+  mod.method("size", [] (const Teuchos::ArrayView<int_t>& v) { return v.size(); });
+  mod.method("size", [] (const Teuchos::ArrayView<size_t>& v) { return v.size(); });
 }
 
 } // namespace trilinoswrap

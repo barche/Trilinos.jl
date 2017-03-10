@@ -103,13 +103,14 @@ struct WrapCrsMatrix
     wrapped.method("getDomainMap", &WrappedT::getDomainMap);
     wrapped.method("getRangeMap", &WrappedT::getRangeMap);
     wrapped.method("getRowMap", &WrappedT::getRowMap);
-    wrapped.method("apply", &WrappedT::apply);
+    wrapped.method("_apply", &WrappedT::apply); // Default arguments not set, hence the _
     wrapped.module().method("apply", [] (const WrappedT& w, const vector_type& a, vector_type& b) { w.apply(a,b); });
     wrapped.module().method("resumeFill", [](WrappedT& w) { w.resumeFill(); });
     wrapped.method("getNumEntriesInGlobalRow", &WrappedT::getNumEntriesInGlobalRow);
     wrapped.method("getGlobalRowCopy", &WrappedT::getGlobalRowCopy);
     wrapped.method("replaceGlobalValues", static_cast<local_ordinal_type (WrappedT::*)(const global_ordinal_type, const Teuchos::ArrayView<const global_ordinal_type>&, const Teuchos::ArrayView<const scalar_type>&) const>(&WrappedT::replaceGlobalValues));
     wrapped.method("getFrobeniusNorm", &WrappedT::getFrobeniusNorm);
+    wrapped.method("apply", &WrappedT::apply);
 
     wrapped.module().method("CrsMatrix", [](const Teuchos::RCP<const typename WrappedT::map_type>& rowmap, const std::size_t max_num_entries_per_row)
     {
@@ -153,8 +154,8 @@ struct WrapMultiVector
     typedef typename dual_view_type::t_dev device_view_type;
     wrapped.module().method("host_view_type", [] (WrappedT& vec) { return cxx_wrap::SingletonType<host_view_type>(); });
     wrapped.module().method("device_view_type", [] (WrappedT& vec) { return cxx_wrap::SingletonType<device_view_type>(); });
-    wrapped.module().method("getLocalView", [] (cxx_wrap::SingletonType<host_view_type>, WrappedT& vec) {return cxx_wrap::create<host_view_type>(vec.template getLocalView<host_view_type>()); } );
-    wrapped.module().method("getLocalView", [] (cxx_wrap::SingletonType<device_view_type>, WrappedT& vec) {return cxx_wrap::create<device_view_type>(vec.template getLocalView<device_view_type>()); } );
+    wrapped.module().method("getLocalView", [] (cxx_wrap::SingletonType<host_view_type>, WrappedT& vec) {return cxx_wrap::create<host_view_type>(vec.template getLocalView<host_view_type>()); } ).set_return_type(cxx_wrap::julia_type<host_view_type>());
+    wrapped.module().method("getLocalView", [] (cxx_wrap::SingletonType<device_view_type>, WrappedT& vec) {return cxx_wrap::create<device_view_type>(vec.template getLocalView<device_view_type>()); } ).set_return_type(cxx_wrap::julia_type<device_view_type>());
   }
 };
 

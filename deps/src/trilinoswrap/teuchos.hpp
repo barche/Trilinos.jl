@@ -28,6 +28,13 @@ namespace trilinoswrap
   {
     return rcp.get();
   }
+
+  template<typename T>
+  struct ArrayViewMirror
+  {
+    jl_array_t* array;
+    int_t size;
+  };
 }
 
 namespace cxx_wrap
@@ -98,31 +105,23 @@ struct ConvertToJulia<Teuchos::Ptr<T>, false, false, false>
   }
 };
 
-// Transparent conversion from Julia arrays to ArrayView
-template<typename T> struct IsValueType<Teuchos::ArrayView<const T>> : std::true_type {};
+template<typename T> struct IsValueType<Teuchos::ArrayView<T>> : std::true_type {};
 
 template<typename T>
-struct InstantiateParametricType<Teuchos::ArrayView<const T>>
+struct static_type_mapping<Teuchos::ArrayView<T>>
 {
-  inline int operator()(Module& m) const
-  {
-    if(!static_type_mapping<Teuchos::ArrayView<const T>>::has_julia_type())
-    {
-      jl_datatype_t* dt = (jl_datatype_t*)jl_apply_array_type(static_type_mapping<T>::julia_type(), 1);
-      protect_from_gc(dt);
-      set_julia_type<Teuchos::ArrayView<const T>>(dt);
-    }
-    return 0;
-  }
+  typedef typename std::remove_const<T>::type NonConstT;
+  typedef trilinoswrap::ArrayViewMirror<T> type;
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)cxx_wrap::julia_type("ArrayView", "Teuchos"), jl_svec1(static_type_mapping<NonConstT>::julia_type())); }
 };
 
+
 template<typename T>
-struct ConvertToCpp<Teuchos::ArrayView<const T>, false, false, false>
+struct ConvertToCpp<Teuchos::ArrayView<T>, false, false, false>
 {
-  Teuchos::ArrayView<const T> operator()(jl_value_t* val) const
+  Teuchos::ArrayView<T> operator()(trilinoswrap::ArrayViewMirror<T> arr_ref) const
   {
-    cxx_wrap::ArrayRef<T,1> arr_ref((jl_array_t*)val);
-    return Teuchos::ArrayView<const T>(arr_ref.data(), arr_ref.size());
+    return Teuchos::ArrayView<T>(reinterpret_cast<T*>(jl_array_data(arr_ref.array)), arr_ref.size);
   }
 };
 

@@ -25,7 +25,10 @@ Thyra.initializeOp(lows_factory, A_thyra, lows)
 
 x = Tpetra.Vector(Tpetra.getDomainMap(A))
 b = Tpetra.Vector(Tpetra.getRangeMap(A))
-Tpetra.randomize(b)
+Tpetra.randomize(x)
+
+# Test apply
+Tpetra.apply(A,x,b)
 
 x_th = Thyra.tpetraVector(domainspace, x)
 b_th = Thyra.tpetraVector(rangespace, b)

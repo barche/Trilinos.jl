@@ -6,10 +6,19 @@ import ..RCPAssociative
 
 export ParameterList
 
+immutable ArrayView{T}
+  array::Array{T,1}
+  size::Int
+end
+
+ArrayView{T}(a::Array{T,1}) = ArrayView(a,length(a))
+Base.convert{T}(::Type{ArrayView{T}}, a::Array{T,1}) = ArrayView(a, length(a))
+
 registry = load_modules(_l_trilinos_wrap)
 wrap_module_types(registry)
 
 CxxWrap.argument_overloads{T}(t::Type{RCPPtr{T}}) = [RCP{T}]
+CxxWrap.argument_overloads{T}(t::Type{ArrayView{T}}) = [Array{T,1}]
 
 wrap_module_functions(registry)
 

@@ -48,8 +48,20 @@ function CrsMatrix{ScalarT, GlobalOrdinalT}(A::SparseMatrixCSC{ScalarT, GlobalOr
   return tpetra_matrix
 end
 
+typealias CrsMatrixUnion{ST,LT,GT,NT} Union{Teuchos.RCP{CrsMatrix{ST,LT,GT,NT}}, CrsMatrix{ST,LT,GT,NT}}
 typealias VectorUnion{ST,LT,GT,NT} Union{Teuchos.RCP{Vector{ST,LT,GT,NT}}, Vector{ST,LT,GT,NT}}
 typealias MultiVectorUnion{ST,LT,GT,NT} Union{Teuchos.RCP{MultiVector{ST,LT,GT,NT}}, MultiVector{ST,LT,GT,NT}}
+typealias AllVectorUnion{ST,LT,GT,NT} Union{VectorUnion{ST,LT,GT,NT},MultiVectorUnion{ST,LT,GT,NT}}
+
+"""
+CrsMatrix apply function with defauls arguments
+"""
+apply{ST,LT,GT,NT}(A::CrsMatrixUnion{ST,LT,GT,NT},
+                   X::AllVectorUnion{ST,LT,GT,NT},
+                   Y::AllVectorUnion{ST,LT,GT,NT},
+                   mode::Teuchos.ETransp=Teuchos.NO_TRANS,
+                   α::Number=1,
+                   β::Number=0) = _apply(A,X,Y,mode,α,β)
 
 """
 Gets an AbstractArray-compatible device view of the whole multivector. Calls getLocalView internally.
