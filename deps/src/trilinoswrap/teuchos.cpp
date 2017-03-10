@@ -157,10 +157,6 @@ void register_teuchos(cxx_wrap::Module& mod)
     JL_GC_POP();
     return (jl_value_t*)keys.wrapped();
   });
-
-  mod.method("size", [] (const Teuchos::ArrayView<double>& v) { return v.size(); });
-  mod.method("size", [] (const Teuchos::ArrayView<int_t>& v) { return v.size(); });
-  mod.method("size", [] (const Teuchos::ArrayView<size_t>& v) { return v.size(); });
 }
 
 } // namespace trilinoswrap

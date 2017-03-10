@@ -20,6 +20,7 @@ add_library(trilinoswrap SHARED
   benchmark.cpp
   module.cpp
   kokkos.cpp
+  testing.cpp
   teuchos.cpp
   tpetra.cpp
   thyra.cpp

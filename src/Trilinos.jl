@@ -34,6 +34,7 @@ include("Kokkos.jl")
 include("Tpetra.jl")
 include("Thyra.jl")
 include("Benchmark.jl")
+include("Testing.jl")
 
 
 end # module

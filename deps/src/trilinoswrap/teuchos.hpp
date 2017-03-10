@@ -32,7 +32,7 @@ namespace trilinoswrap
   template<typename T>
   struct ArrayViewMirror
   {
-    jl_array_t* array;
+    T* array;
     int_t size;
   };
 }
@@ -105,7 +105,8 @@ struct ConvertToJulia<Teuchos::Ptr<T>, false, false, false>
   }
 };
 
-template<typename T> struct IsValueType<Teuchos::ArrayView<T>> : std::true_type {};
+template<typename T> struct IsBits<Teuchos::ArrayView<T>> : std::true_type {};
+template<typename T> struct IsImmutable<Teuchos::ArrayView<T>> : std::true_type {};
 
 template<typename T>
 struct static_type_mapping<Teuchos::ArrayView<T>>
@@ -117,11 +118,11 @@ struct static_type_mapping<Teuchos::ArrayView<T>>
 
 
 template<typename T>
-struct ConvertToCpp<Teuchos::ArrayView<T>, false, false, false>
+struct ConvertToCpp<Teuchos::ArrayView<T>, false, true, true>
 {
   Teuchos::ArrayView<T> operator()(trilinoswrap::ArrayViewMirror<T> arr_ref) const
   {
-    return Teuchos::ArrayView<T>(reinterpret_cast<T*>(jl_array_data(arr_ref.array)), arr_ref.size);
+    return Teuchos::ArrayView<T>(arr_ref.array, arr_ref.size);
   }
 };
 
