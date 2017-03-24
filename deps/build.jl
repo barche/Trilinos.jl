@@ -25,6 +25,8 @@ cmake_prefix = TRILINOS_ROOT
 prefix=joinpath(BinDeps.depsdir(trilinoswrap),"usr")
 trilinoswrap_srcdir = joinpath(BinDeps.depsdir(trilinoswrap),"src","trilinoswrap")
 trilinoswrap_builddir = joinpath(BinDeps.depsdir(trilinoswrap),"builds","trilinoswrap")
+examples_srcdir = joinpath(BinDeps.depsdir(trilinoswrap),"src","upstream_examples")
+examples_builddir = joinpath(BinDeps.depsdir(trilinoswrap),"builds","upstream_examples")
 lib_prefix = @static is_windows() ? "" : "lib"
 lib_suffix = @static is_windows() ? "dll" : (@static is_apple() ? "dylib" : "so")
 
@@ -50,11 +52,31 @@ trilinos_steps = @build_steps begin
 	`cmake --build . --config $build_type --target install $makeopts`
 end
 
+examples_steps = @build_steps begin
+	`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DCMAKE_PREFIX_PATH="$cmake_prefix" -DCMAKE_CXX_COMPILER=mpic++ -DCMAKE_C_COMPILER=mpicc $examples_srcdir`
+	`cmake --build . --config $build_type $makeopts`
+end
+
 # If built, always run cmake, in case the code changed
 if isdir(trilinoswrap_builddir)
   BinDeps.run(@build_steps begin
     ChangeDirectory(trilinoswrap_builddir)
     trilinos_steps
+  end)
+end
+
+if(!isdir(examples_builddir))
+  BinDeps.run(@build_steps begin
+    CreateDirectory(examples_builddir)
+    @build_steps begin
+      ChangeDirectory(examples_builddir)
+      examples_steps
+    end
+  end)
+else
+  BinDeps.run(@build_steps begin
+    ChangeDirectory(examples_builddir)
+    examples_steps
   end)
 end
 

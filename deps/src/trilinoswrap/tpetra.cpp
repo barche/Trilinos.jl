@@ -2,6 +2,7 @@
 #include <mpi.h>
 
 #include <Teuchos_DefaultMpiComm.hpp>
+#include <Teuchos_VerboseObject.hpp>
 
 #include <Tpetra_CrsMatrix.hpp>
 #include <Tpetra_Map.hpp>
@@ -125,6 +126,7 @@ struct WrapCrsMatrix
       return Teuchos::rcp(new WrappedT(graph));
     });
     wrapped.module().method("convert", convert<WrappedT, Tpetra::Operator<scalar_type, local_ordinal_type, global_ordinal_type, node_type>>);
+    wrapped.module().method("describe", [](const WrappedT& mat, const Teuchos::EVerbosityLevel verbLevel) { mat.describe(*Teuchos::VerboseObjectBase::getDefaultOStream(), verbLevel); });
   }
 };
 

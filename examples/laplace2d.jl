@@ -1,6 +1,3 @@
-# Powermethod using Tpetra
-# Adapted from https://trilinos.org/docs/dev/packages/tpetra/doc/html/Tpetra_Lesson03.html
-
 using MPI
 using Trilinos
 using Base.Test
@@ -33,8 +30,9 @@ function laplace2d_indices!(inds_array,i,nx,ny)
   return n_inds
 end
 
-function fill_laplace2d!(A, nx::Integer, ny::Integer)
-  rowmap = Tpetra.getRowMap(A)
+function fill_laplace2d!(A_rcp, nx::Integer, ny::Integer)
+  A = A_rcp[]
+  rowmap = (Tpetra.getRowMap(A))[]
   n_my_elms = Tpetra.getNodeNumElements(rowmap)
 
   # storage for the per-row values
@@ -44,6 +42,7 @@ function fill_laplace2d!(A, nx::Integer, ny::Integer)
   for i in 0:n_my_elms-1
     global_row = Tpetra.getGlobalElement(rowmap,i)
     row_n_elems = laplace2d_indices!(row_indices, global_row, nx, ny)
+    row_values[1] = 4.0 - (5-row_n_elems)
     Tpetra.insertGlobalValues(A, global_row, Teuchos.ArrayView(row_indices,row_n_elems), Teuchos.ArrayView(row_values,row_n_elems))
   end
 end
@@ -58,8 +57,10 @@ function laplace2d(comm, nx::Integer, ny::Integer)
 
   # Matrix construction
   A = Tpetra.CrsMatrix(rowmap, 0)
-  fill_laplace2d!(A,nx,ny)
+  @time fill_laplace2d!(A,nx,ny)
   Tpetra.fillComplete(A)
+
+  #Tpetra.describe(A, Teuchos.VERB_EXTREME)
 
   # Construct the vectors
   x_ref = Tpetra.Vector(Tpetra.getDomainMap(A)) # reference solution
@@ -69,15 +70,15 @@ function laplace2d(comm, nx::Integer, ny::Integer)
   Tpetra.randomize(x_ref)
   Tpetra.apply(A,x_ref,b)
 
-  lows = Thyra.LinearOpWithSolve(A)
+  lows = Thyra.LinearOpWithSolve(A, Teuchos.ParameterList(), Teuchos.VERB_NONE)
 
   # Compute the solution
   x = lows \ b
 
   # Check solution
-  for (xi, xi_ref) in zip(Tpetra.device_view(x), Tpetra.device_view(x_ref))
-    @test abs(xi-xi_ref) < abs(xi)*1e-4
-  end
+  # for (xi, xi_ref) in zip(Tpetra.device_view(x), Tpetra.device_view(x_ref))
+  #   @test abs(xi-xi_ref) < abs(xi)*1e-4
+  # end
 
   return x
 end
@@ -86,7 +87,7 @@ end
 MPI.Init()
 comm = Teuchos.MpiComm(MPI.CComm(MPI.COMM_WORLD))
 
-@time x = laplace2d(comm, 20, 20)
-@time x = laplace2d(comm, 20, 20)
-
+x = laplace2d(comm, 200, 20)
+x = laplace2d(comm, 200, 20)
+x = laplace2d(comm, 200, 20)
 MPI.Finalize()
