@@ -28,14 +28,6 @@ namespace cxx_wrap
 namespace trilinoswrap
 {
 
-jl_datatype_t* g_rcp_type;
-jl_datatype_t* g_ptr_type;
-
-jl_datatype_t* rcp_wrappable()
-{
-  return cxx_wrap::julia_type("RCPWrappable", "Trilinos");
-}
-
 template<typename T>
 struct AddSetMethod
 {
@@ -101,14 +93,8 @@ void register_teuchos(cxx_wrap::Module& mod)
 {
   using namespace cxx_wrap;
 
-  // RCP
-  mod.add_type<Parametric<TypeVar<1>>>("RCP");
-  mod.add_type<Parametric<TypeVar<1>>>("RCPPtr");
-  g_rcp_type = mod.get_julia_type("RCP");
-  g_ptr_type = mod.get_julia_type("RCPPtr");
-
   // Comm
-  mod.add_abstract<Teuchos::Comm<int>>("Comm", rcp_wrappable())
+  mod.add_type<Teuchos::Comm<int>>("Comm")
     .method("getRank", &Teuchos::Comm<int>::getRank)
     .method("getSize", &Teuchos::Comm<int>::getSize);
   mod.add_type<Teuchos::MpiComm<int>>("MpiComm", julia_type<Teuchos::Comm<int>>());
@@ -131,7 +117,7 @@ void register_teuchos(cxx_wrap::Module& mod)
   mod.set_const("VERB_HIGH", Teuchos::VERB_HIGH);
   mod.set_const("VERB_EXTREME", Teuchos::VERB_EXTREME);
 
-  mod.add_type<Teuchos::ParameterList>("ParameterList", cxx_wrap::julia_type("RCPAssociative", "Trilinos"))
+  mod.add_type<Teuchos::ParameterList>("ParameterList", cxx_wrap::julia_type("PLAssociative", "Trilinos"))
     .method("numParams", &Teuchos::ParameterList::numParams)
     .method("setName", &Teuchos::ParameterList::setName)
     .method("name", static_cast<const std::string& (Teuchos::ParameterList::*)() const>(&Teuchos::ParameterList::name))

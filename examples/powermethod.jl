@@ -16,6 +16,7 @@ function powermethod(A, niters::Number, tolerance::Number)
   residual = 0.0
 
   report_frequency = 10
+
   for iter in 1:niters
     normz = Tpetra.norm2(z)         # Compute the 2-norm of z
     Tpetra.scale(q, 1.0 / normz, z) # q := z / normz

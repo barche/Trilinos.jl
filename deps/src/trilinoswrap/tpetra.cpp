@@ -4,7 +4,6 @@
 #include <Teuchos_DefaultMpiComm.hpp>
 #include <Teuchos_VerboseObject.hpp>
 
-#include <Tpetra_CrsMatrix.hpp>
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
 #include <Tpetra_Vector.hpp>
@@ -12,6 +11,7 @@
 
 #include "kokkos.hpp"
 #include "teuchos.hpp"
+#include "tpetra.hpp"
 
 namespace cxx_wrap
 {
@@ -27,10 +27,6 @@ struct BuildParameterList<T<P1,P2,P3,P4,B>>
 {
   typedef ParameterList<P1,P2,P3,P4,bool> type;
 };
-
-template<> struct IsBits<Tpetra::ProfileType> : std::true_type {};
-
-template<typename T1, typename T2, typename T3, typename T4> struct CopyConstructible<Tpetra::Vector<T1,T2,T3,T4>> : std::false_type {};
 
 }
 
@@ -125,7 +121,6 @@ struct WrapCrsMatrix
     {
       return Teuchos::rcp(new WrappedT(graph));
     });
-    wrapped.module().method("convert", convert<WrappedT, Tpetra::Operator<scalar_type, local_ordinal_type, global_ordinal_type, node_type>>);
     wrapped.module().method("describe", [](const WrappedT& mat, const Teuchos::EVerbosityLevel verbLevel) { mat.describe(*Teuchos::VerboseObjectBase::getDefaultOStream(), verbLevel); });
   }
 };
@@ -178,7 +173,6 @@ struct WrapVector
     wrapped.method("dot", static_cast<dot_type (WrappedT::*)(const WrappedT&) const>(&WrappedT::dot));
 
     wrapped.module().method("Vector", [] (const Teuchos::RCP<const map_type>& map) { return Teuchos::rcp(new WrappedT(map)); });
-    wrapped.module().method("convert", convert_unwrap<WrappedT, Tpetra::MultiVector<scalar_type, typename WrappedT::local_ordinal_type, global_ordinal_type, node_type>>);
   }
 };
 
@@ -213,19 +207,19 @@ void register_tpetra(cxx_wrap::Module& mod)
   mod.set_const("StaticProfile", Tpetra::StaticProfile);
   mod.set_const("DynamicProfile", Tpetra::DynamicProfile);
 
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("Map", rcp_wrappable())
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("Map")
     .apply_combination<Tpetra::Map, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapMap());
 
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("CrsGraph", rcp_wrappable())
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("CrsGraph")
     .apply_combination<ApplyTpetra3<Tpetra::CrsGraph>, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapCrsGraph());
 
-  auto operator_type = mod.add_abstract<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("Operator", rcp_wrappable());
+  auto operator_type = mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("Operator");
   operator_type.apply_combination<Tpetra::Operator, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapTpetraNoOp());
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("CrsMatrix", operator_type.dt())
     .apply_combination<ApplyTpetra4<Tpetra::CrsMatrix>, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapCrsMatrix());
 
-  auto multivector = mod.add_abstract<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("MultiVector", rcp_wrappable());
+  auto multivector = mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("MultiVector");
   multivector.apply_combination<ApplyTpetra4<Tpetra::MultiVector>, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapMultiVector());
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("Vector", multivector.dt())
     .apply_combination<ApplyTpetra4<Tpetra::Vector>, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapVector());

@@ -13,21 +13,17 @@
 
 #include "kokkos.hpp"
 #include "teuchos.hpp"
+#include "tpetra.hpp"
 
 namespace cxx_wrap
 {
 
-// heap-allocate solver result
-template<typename T>
-struct ConvertToJulia<Thyra::SolveStatus<T>, false, false, false>
-{
-  inline jl_value_t* operator()(const Thyra::SolveStatus<T>& cpp_obj) const
-  {
-    return create<Thyra::SolveStatus<T>>(cpp_obj);
-  }
-};
-
 template<> struct IsBits<Thyra::EOpTransp> : std::true_type {};
+
+template<typename ScalarT, typename... Params> struct SuperType<Thyra::TpetraVectorSpace<ScalarT, Params...>> { typedef Thyra::VectorSpaceBase<ScalarT> type; };
+template<typename ScalarT> struct SuperType<Thyra::VectorBase<ScalarT>> { typedef Thyra::MultiVectorBase<ScalarT> type; };
+template<typename ScalarT, typename... Params> struct SuperType<Thyra::TpetraVector<ScalarT, Params...>> { typedef Thyra::VectorBase<ScalarT> type; };
+template<typename ScalarT, typename... Params> struct SuperType<Thyra::TpetraLinearOp<ScalarT, Params...>> { typedef Thyra::LinearOpBase<ScalarT> type; };
 
 }
 
@@ -45,8 +41,6 @@ struct WrapTpetraLinOpInternal<Thyra::TpetraLinearOp<ScalarT,LocalOrdinal,Global
     mod.method("tpetraVectorSpace", Thyra::tpetraVectorSpace<ScalarT,LocalOrdinal,GlobalOrdinal,Node>);
     mod.method("tpetraLinearOp", Thyra::tpetraLinearOp<ScalarT,LocalOrdinal,GlobalOrdinal,Node>);
     mod.method("tpetraVector", Thyra::tpetraVector<ScalarT,LocalOrdinal,GlobalOrdinal,Node>);
-    mod.method("convert", convert<Thyra::TpetraVectorSpace<ScalarT,LocalOrdinal,GlobalOrdinal,Node>, Thyra::VectorSpaceBase<ScalarT>>);
-    mod.method("convert", convert<Thyra::TpetraLinearOp<ScalarT,LocalOrdinal,GlobalOrdinal,Node>, Thyra::LinearOpBase<ScalarT>>);
   }
 };
 
@@ -109,7 +103,6 @@ struct WrapTpetraVector
   {
     typedef typename TypeWrapperT::type WrappedT;
     typedef typename extract_scalar_type<WrappedT>::type Scalar;
-    wrapped.module().method("convert", convert<WrappedT, Thyra::MultiVectorBase<Scalar>>);
   }
 };
 
@@ -126,25 +119,25 @@ void register_thyra(cxx_wrap::Module& mod)
 {
   using namespace cxx_wrap;
 
-  auto vecspace_base = mod.add_abstract<Parametric<TypeVar<1>>>("VectorSpaceBase", rcp_wrappable());
+  auto vecspace_base = mod.add_type<Parametric<TypeVar<1>>>("VectorSpaceBase");
   vecspace_base.apply_combination<Thyra::VectorSpaceBase, scalars_t>(WrapNoOp());
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>, ParameterList<TypeVar<1>>>("TpetraVectorSpace", vecspace_base.dt())
     .apply_combination<Thyra::TpetraVectorSpace, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapNoOp());
 
-  auto multi_vector_base = mod.add_abstract<Parametric<TypeVar<1>>>("MultiVectorBase", rcp_wrappable());
+  auto multi_vector_base = mod.add_type<Parametric<TypeVar<1>>>("MultiVectorBase");
   multi_vector_base.apply_combination<Thyra::MultiVectorBase, scalars_t>(WrapNoOp());
 
-  auto vector_base = mod.add_abstract<Parametric<TypeVar<1>>>("VectorBase", multi_vector_base.dt());
+  auto vector_base = mod.add_type<Parametric<TypeVar<1>>>("VectorBase", multi_vector_base.dt());
   vector_base.apply_combination<Thyra::VectorBase, scalars_t>(WrapNoOp());
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>, ParameterList<TypeVar<1>>>("TpetraVector", vector_base.dt())
     .apply_combination<Thyra::TpetraVector, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapTpetraVector());
 
-  auto linop_base = mod.add_abstract<Parametric<TypeVar<1>>>("LinearOpBase", rcp_wrappable());
+  auto linop_base = mod.add_type<Parametric<TypeVar<1>>>("LinearOpBase");
   linop_base.apply_combination<Thyra::LinearOpBase, scalars_t>(WrapNoOp());
 
-  mod.add_type<Parametric<TypeVar<1>>>("LinearOpWithSolveBase", rcp_wrappable())
+  mod.add_type<Parametric<TypeVar<1>>>("LinearOpWithSolveBase")
     .apply_combination<Thyra::LinearOpWithSolveBase, scalars_t>(WrapNoOp());
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>, ParameterList<TypeVar<1>>>("TpetraLinearOp", linop_base.dt())
@@ -159,10 +152,10 @@ void register_thyra(cxx_wrap::Module& mod)
   mod.add_type<Parametric<TypeVar<1>>>("SolveStatus")
     .apply_combination<Thyra::SolveStatus, scalars_t>(WrapSolveStatus());
 
-  mod.add_type<Parametric<TypeVar<1>>>("SolveCriteria", rcp_wrappable())
+  mod.add_type<Parametric<TypeVar<1>>>("SolveCriteria")
     .apply_combination<Thyra::SolveCriteria, scalars_t>(WrapNoOp());
 
-  mod.add_type<Parametric<TypeVar<1>>>("LinearOpWithSolveFactoryBase", rcp_wrappable())
+  mod.add_type<Parametric<TypeVar<1>>>("LinearOpWithSolveFactoryBase")
     .apply_combination<Thyra::LinearOpWithSolveFactoryBase, scalars_t>(WrapLOWSFactory());
 }
 

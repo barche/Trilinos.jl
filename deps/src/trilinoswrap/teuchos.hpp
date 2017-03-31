@@ -11,24 +11,6 @@
 
 namespace trilinoswrap
 {
-  extern jl_datatype_t* g_rcp_type;
-  extern jl_datatype_t* g_ptr_type;
-
-  jl_datatype_t* rcp_wrappable();
-
-  /// Helper function to generate RCP conversions between convertible C++ types
-  template<typename FromT, typename ToT>
-  inline Teuchos::RCP<ToT> convert(cxx_wrap::SingletonType<Teuchos::RCP<ToT>>, const Teuchos::RCP<FromT>& rcp)
-  {
-    return Teuchos::RCP<ToT>(rcp);
-  }
-
-  template<typename FromT, typename ToT>
-  inline ToT* convert_unwrap(cxx_wrap::SingletonType<ToT>, const Teuchos::RCP<FromT>& rcp)
-  {
-    return rcp.get();
-  }
-
   template<typename T>
   struct ArrayViewMirror
   {
@@ -45,66 +27,26 @@ template<> struct IsBits<Teuchos::ETransp> : std::true_type {};
 template<> struct IsBits<Teuchos::EVerbosityLevel> : std::true_type {};
 
 // Some special-casing for RCP
+template<typename T> struct IsSmartPointerType<Teuchos::RCP<T>> : std::true_type { };
+template<typename T> struct IsSmartPointerType<Teuchos::Ptr<T>> : std::true_type { };
+template<typename T> struct ConstructorPointerType<Teuchos::Ptr<T>> { typedef Teuchos::RCP<T> type; };
+
 template<typename T>
-struct InstantiateParametricType<Teuchos::RCP<T>>
+struct ConstructFromOther<Teuchos::Ptr<T>, Teuchos::RCP<T>>
 {
-  inline int operator()(Module& m) const
+  static jl_value_t* apply(jl_value_t* smart_void_ptr)
   {
-    // Register the Julia type if not already instantiated
-    typedef typename std::remove_const<T>::type nonconst_t;
-    if(!static_type_mapping<Teuchos::RCP<nonconst_t>>::has_julia_type())
+    if(jl_typeof(smart_void_ptr) != (jl_value_t*)julia_type<Teuchos::RCP<T>>())
     {
-      jl_datatype_t* wrapped_t = static_type_mapping<nonconst_t>::julia_type();
-
-      jl_datatype_t* dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)trilinoswrap::g_rcp_type, jl_svec1(wrapped_t));
-      protect_from_gc(dt);
-      set_julia_type<Teuchos::RCP<const nonconst_t>>(dt);
-      set_julia_type<Teuchos::RCP<nonconst_t>>(dt);
-      m.method("convert", [] (cxx_wrap::SingletonType<nonconst_t>, const Teuchos::RCP<nonconst_t>& rcp) { return rcp.get(); });
+      jl_error("Invalid smart pointer convert, Teuchos::Ptr must be converted from Teuchos::RCP");
+      return nullptr;
     }
-    return 0;
+    auto smart_ptr = unbox_wrapped_ptr<Teuchos::RCP<T>>(smart_void_ptr);
+    return boxed_cpp_pointer(new Teuchos::Ptr<T>(smart_ptr->ptr()), static_type_mapping<Teuchos::Ptr<T>>::julia_type(), true);
   }
 };
 
-template<typename T>
-struct InstantiateParametricType<Teuchos::Ptr<T>>
-{
-  inline int operator()(Module& m) const
-  {
-    // Register the Julia type if not already instantiated
-    typedef typename std::remove_const<T>::type nonconst_t;
-    if(!static_type_mapping<Teuchos::Ptr<nonconst_t>>::has_julia_type())
-    {
-      jl_datatype_t* wrapped_t = static_type_mapping<nonconst_t>::julia_type();
-
-      jl_datatype_t* dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)trilinoswrap::g_ptr_type, jl_svec1(wrapped_t));
-      protect_from_gc(dt);
-      set_julia_type<Teuchos::Ptr<const nonconst_t>>(dt);
-      set_julia_type<Teuchos::Ptr<nonconst_t>>(dt);
-      m.method("convert", [] (cxx_wrap::SingletonType<Teuchos::Ptr<nonconst_t>>, const Teuchos::RCP<nonconst_t>& rcp) { return rcp.ptr(); });
-    }
-    return 0;
-  }
-};
-
-template<typename T>
-struct ConvertToJulia<Teuchos::RCP<T>, false, false, false>
-{
-  inline jl_value_t* operator()(const Teuchos::RCP<T>& cpp_obj) const
-  {
-    return create<Teuchos::RCP<T>>(cpp_obj);
-  }
-};
-
-template<typename T>
-struct ConvertToJulia<Teuchos::Ptr<T>, false, false, false>
-{
-  inline jl_value_t* operator()(const Teuchos::Ptr<T>& cpp_obj) const
-  {
-    return create<Teuchos::Ptr<T>>(cpp_obj);
-  }
-};
-
+// ArrayView
 template<typename T> struct IsBits<Teuchos::ArrayView<T>> : std::true_type {};
 template<typename T> struct IsImmutable<Teuchos::ArrayView<T>> : std::true_type {};
 

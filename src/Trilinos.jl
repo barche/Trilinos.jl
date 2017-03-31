@@ -6,6 +6,7 @@ export Tpetra
 export Thyra
 
 using CxxWrap
+using Compat
 
 # Load the deps
 const depsfile = joinpath(dirname(dirname(@__FILE__)), "deps", "deps.jl")
@@ -14,20 +15,12 @@ if !isfile(depsfile)
 end
 include(depsfile)
 
-# Base type for RCP-wrappable types in Julia
-abstract RCPWrappable <: CxxWrap.CppAny
-
-# Base type for RCP-wrappable associative types in Julia
-abstract RCPAssociative <: CxxWrap.CppAssociative{String, Any}
-
-# Generate RCP overloads automatically
-CxxWrap.argument_overloads{T <: RCPWrappable}(t::Type{T}) = [Trilinos.Teuchos.RCP{T}]
-CxxWrap.argument_overloads{T <: RCPAssociative}(t::Type{T}) = [Trilinos.Teuchos.RCP{T}]
-
 # Overload for size_t
 @static if Sys.WORD_SIZE == 64
   CxxWrap.argument_overloads(t::Type{UInt64}) = [Int64]
 end
+
+@compat CxxUnion{T} = Union{T,CxxWrap.SmartPointer{T}}
 
 include("Teuchos.jl")
 include("Kokkos.jl")

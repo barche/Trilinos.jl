@@ -30,9 +30,8 @@ function laplace2d_indices!(inds_array,i,nx,ny)
   return n_inds
 end
 
-function fill_laplace2d!(A_rcp, nx::Integer, ny::Integer)
-  A = A_rcp[]
-  rowmap = (Tpetra.getRowMap(A))[]
+function fill_laplace2d!(A, nx::Integer, ny::Integer)
+  rowmap = Tpetra.getRowMap(A)
   n_my_elms = Tpetra.getNodeNumElements(rowmap)
 
   # storage for the per-row values

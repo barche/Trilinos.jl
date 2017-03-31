@@ -2,6 +2,7 @@
 #include <mpi.h>
 
 #include "teuchos.hpp"
+#include "tpetra.hpp"
 
 #include <Teuchos_ArrayView.hpp>
 

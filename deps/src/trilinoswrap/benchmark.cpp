@@ -6,6 +6,9 @@
 #include <Tpetra_Map.hpp>
 #include <Tpetra_Vector.hpp>
 
+#include "teuchos.hpp"
+#include "tpetra.hpp"
+
 namespace trilinoswrap
 {
 
