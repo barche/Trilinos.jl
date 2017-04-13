@@ -1,19 +1,27 @@
 using MPI
 using Trilinos
 using Base.Test
+using Compat
+
+struct CartesianGrid
+  nx::Int # Number of points in the X direction
+  ny::Int # Number of points in the Y direction
+end
+
+nnodes(g::CartesianGrid) = g.nx*g.ny
 
 """
 Matrix global indices for the 2D laplace stencil (0-based!)
 """
-function laplace2d_indices!(inds_array,i,nx,ny)
-  ix = i % nx
-  iy = (i-ix) ÷ nx
+function laplace2d_indices!(inds_array,i,g::CartesianGrid)
+  ix = i % g.nx
+  iy = (i-ix) ÷ g.nx
 
   n_inds = 1
   inds_array[n_inds] = i
-  if iy != ny-1
+  if iy != g.ny-1
       n_inds += 1
-      inds_array[n_inds] = i+nx
+      inds_array[n_inds] = i+g.nx
   end
   if ix != 0
       n_inds += 1
@@ -21,16 +29,16 @@ function laplace2d_indices!(inds_array,i,nx,ny)
   end
   if iy != 0
       n_inds += 1
-      inds_array[n_inds] = i-nx
+      inds_array[n_inds] = i-g.nx
   end
-  if ix != nx-1
+  if ix != g.nx-1
       n_inds += 1
       inds_array[n_inds] = i+1
   end
   return n_inds
 end
 
-function fill_laplace2d!(A, nx::Integer, ny::Integer)
+function fill_laplace2d!(A, g::CartesianGrid)
   rowmap = Tpetra.getRowMap(A)
   n_my_elms = Tpetra.getNodeNumElements(rowmap)
 
@@ -40,23 +48,22 @@ function fill_laplace2d!(A, nx::Integer, ny::Integer)
 
   for i in 0:n_my_elms-1
     global_row = Tpetra.getGlobalElement(rowmap,i)
-    row_n_elems = laplace2d_indices!(row_indices, global_row, nx, ny)
+    row_n_elems = laplace2d_indices!(row_indices, global_row, g)
     row_values[1] = 4.0 - (5-row_n_elems)
     Tpetra.insertGlobalValues(A, global_row, Teuchos.ArrayView(row_indices,row_n_elems), Teuchos.ArrayView(row_values,row_n_elems))
   end
 end
 
 """
-Solve the 2D Posson problem on a structured grid with nx*ny nodes
+Solve the 2D Posson problem on a structured grid
 """
-function laplace2d(comm, nx::Integer, ny::Integer)
+function laplace2d(comm, g::CartesianGrid)
   # Construct map
-  nnodes = nx*ny
-  rowmap = Tpetra.Map(nnodes, 0, comm)
+  rowmap = Tpetra.Map(nnodes(g), 0, comm)
 
   # Matrix construction
   A = Tpetra.CrsMatrix(rowmap, 0)
-  @time fill_laplace2d!(A,nx,ny)
+  @time fill_laplace2d!(A,g)
   Tpetra.fillComplete(A)
 
   #Tpetra.describe(A, Teuchos.VERB_EXTREME)
@@ -86,7 +93,10 @@ end
 MPI.Init()
 comm = Teuchos.MpiComm(MPI.CComm(MPI.COMM_WORLD))
 
-x = laplace2d(comm, 200, 20)
-x = laplace2d(comm, 200, 20)
-x = laplace2d(comm, 200, 20)
+grid = CartesianGrid(200,20)
+
+x = laplace2d(comm, grid)
+x = laplace2d(comm, grid)
+x = laplace2d(comm, grid)
+
 MPI.Finalize()

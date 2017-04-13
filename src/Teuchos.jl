@@ -1,10 +1,11 @@
 module Teuchos
 using CxxWrap, MPI
+using Compat
 import .._l_trilinos_wrap
 
 export ParameterList
 
-abstract PLAssociative <: CxxWrap.CppAssociative{String, Any}
+@compat abstract type PLAssociative <: CxxWrap.CppAssociative{String, Any} end
 
 immutable ArrayView{T}
   array::Ptr{T}

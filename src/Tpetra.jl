@@ -1,5 +1,6 @@
 module Tpetra
 using CxxWrap, MPI
+using Compat
 import .._l_trilinos_wrap
 import ..CxxUnion
 import ..Teuchos
@@ -78,7 +79,7 @@ host_view{ST,LT,GT,NT}(v::CxxUnion{Vector{ST,LT,GT,NT}}) = _get_view(v, host_vie
 _get_view{ST,LT,GT,NT}(mv::CxxUnion{MultiVector{ST,LT,GT,NT}}, view_type) = Kokkos.View(ST, Val{2}, getLocalView(view_type, mv))
 _get_view{ST,LT,GT,NT}(mv::CxxUnion{Vector{ST,LT,GT,NT}}, view_type) = Kokkos.View(ST, Val{1}, getLocalView(view_type, mv))
 
-typealias PtrViewTypes{ArrayT,DeviceT} Union{Type{Kokkos.View3{ArrayT, Kokkos.LayoutLeft, DeviceT}}, Type{Kokkos.View4{ArrayT, Kokkos.LayoutLeft, DeviceT, Void}}}
+@compat PtrViewTypes{ArrayT,DeviceT} = Union{Type{Kokkos.View3{ArrayT, Kokkos.LayoutLeft, DeviceT}}, Type{Kokkos.View4{ArrayT, Kokkos.LayoutLeft, DeviceT, Void}}}
 function _get_view{ST,LT,GT,NT,ArrayT,DeviceT}(mv::CxxUnion{MultiVector{ST,LT,GT,NT}}, view_type::PtrViewTypes{ArrayT,DeviceT})
   localview = getLocalView(view_type, mv)
   sizes = (Int(Kokkos.dimension(localview,0)),Int(Kokkos.dimension(localview,1)))

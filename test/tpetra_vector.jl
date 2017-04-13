@@ -32,8 +32,8 @@ Tpetra.putScalar(mv, 2)
 @show typeof(device_vt)
 @show typeof(host_vt)
 
-device_mvt = Tpetra.device_view_type(mv)
-host_mvt = Tpetra.host_view_type(mv)
+@show device_mvt = Tpetra.device_view_type(mv)
+@show host_mvt = Tpetra.host_view_type(mv)
 
 host_v = Tpetra.getLocalView(host_vt, v)
 host_mv = Tpetra.getLocalView(host_mvt, mv)
