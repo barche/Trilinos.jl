@@ -47,6 +47,7 @@ struct WrapMap
     });
     wrapped.method("getNodeNumElements", &WrappedT::getNodeNumElements);
     wrapped.method("getGlobalElement", &WrappedT::getGlobalElement);
+    wrapped.method("getLocalElement", &WrappedT::getLocalElement);
     wrapped.method("isNodeGlobalElement", &WrappedT::isNodeGlobalElement);
   }
 };
@@ -143,6 +144,8 @@ struct WrapMultiVector
     wrapped.method("update", static_cast<void (WrappedT::*)(const scalar_type&, const WrappedT&, const scalar_type&, const WrappedT&, const scalar_type&)>(&WrappedT::update));
     wrapped.method("putScalar", static_cast<void (WrappedT::*)(const scalar_type&)>(&WrappedT::putScalar));
     wrapped.method("dot", static_cast<void (WrappedT::*)(const WrappedT&, const Teuchos::ArrayView<dot_type>&) const>(&WrappedT::dot));
+
+    wrapped.method("getMap", &WrappedT::getMap);
 
     wrapped.module().method("MultiVector", [] (const Teuchos::RCP<const map_type>& map, const std::size_t num_vecs) { return Teuchos::rcp(new WrappedT(map, num_vecs)); });
 

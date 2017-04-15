@@ -5,6 +5,6 @@ This package aims to allow using the [Trilinos](https://trilinos.org/) library f
 At this time, the following is implemented (see tests and examples):
 * Conversion from non-distributed Julia sparse array to Tpetra::CrsMatrix
 * Vector views wrapping ArrayView (Julia loops as fast as in C++)
-* Some native functions for matrix assembly (assembly loop on-par with C++)
+* Some native functions for matrix assembly (assembly loop on-par with C++, see laplace2d example)
 * Linear solve using \
 * Solver parametrization using ParameterList
