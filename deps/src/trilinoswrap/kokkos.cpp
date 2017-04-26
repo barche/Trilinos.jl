@@ -20,6 +20,9 @@ struct WrapView
     wrapped.method("dimension", &WrappedT::template dimension<int_t>);
     wrapped.method(&WrappedT::template operator()<int_t, int_t>);
     wrapped.method("ptr_on_device", &WrappedT::ptr_on_device);
+    wrapped.module().method("value_type", [] (cxx_wrap::SingletonType<WrappedT>) { return cxx_wrap::SingletonType<ScalarT>(); });
+    wrapped.module().method("array_layout", [] (cxx_wrap::SingletonType<WrappedT>) { return cxx_wrap::SingletonType<typename WrappedT::array_layout>(); });
+    wrapped.module().method("rank", [] (cxx_wrap::SingletonType<WrappedT>) { return int_t(WrappedT::rank); });
   }
 };
 

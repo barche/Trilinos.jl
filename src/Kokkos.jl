@@ -1,40 +1,39 @@
 module Kokkos
-  using CxxWrap, MPI
+  using CxxWrap
+  using MPI
+  using Compat
   import .._l_trilinos_wrap
+
+  using CustomUnitRanges: filename_for_zerorange
+  include(filename_for_zerorange)
 
   registry = load_modules(_l_trilinos_wrap)
   wrap_module(registry)
 
   """
-  Wrap a concrete view type, providing an array interface
+  Expose a view using its raw data pointer
   """
-  immutable View{ScalarT,N,ViewT} <: AbstractArray{ScalarT,N}
-    kokkos_view::ViewT
-  end
-  View{ScalarT,N,ViewT}(::Type{ScalarT}, ::Type{Val{N}}, v::ViewT) = View{ScalarT,N,ViewT}(v)
-
-  # Store a raw pointer together with array size
-  immutable PtrWrapper{ScalarT,N}
+  immutable PtrView{ScalarT,N,LayoutT} <: AbstractArray{ScalarT,N}
     ptr::Ptr{ScalarT}
     size::NTuple{N,Int}
   end
 
-  # Generic array interface, using operator() access
-  Base.size{ScalarT, ViewT <: CxxWrap.CppAny}(v::View{ScalarT,1,ViewT}) = (Int(dimension(v.kokkos_view,0)),)
-  Base.size{ScalarT, ViewT <: CxxWrap.CppAny}(v::View{ScalarT,2,ViewT}) = (Int(dimension(v.kokkos_view,0)),Int(dimension(v.kokkos_view,1)))
-  Base.getindex{ScalarT, ViewT <: CxxWrap.CppAny}(v::View{ScalarT,1,ViewT}, i::Integer) = unsafe_load(v.kokkos_view(i-1, 0))
-  Base.getindex{ScalarT, ViewT <: CxxWrap.CppAny}(v::View{ScalarT,2,ViewT}, i::Integer, j::Integer) = unsafe_load(v.kokkos_view(i-1, j-1))
-  Base.setindex!{ScalarT, ViewT <: CxxWrap.CppAny}(v::View{ScalarT,1,ViewT}, value, i::Integer) = unsafe_store!(v.kokkos_view(i-1, 0), value)
-  Base.setindex!{ScalarT, ViewT <: CxxWrap.CppAny}(v::View{ScalarT,2,ViewT}, value, i::Integer, j::Integer) = unsafe_store!(v.kokkos_view(i-1, j-1), value)
+  make_dimensions{N}(v,::Type{Val{N}}) = ([Int(Kokkos.dimension(v,i-1)) for i in 1:N]...)
 
-  # raw pointer access (i.e. the fast path)
-  @static if VERSION < v"0.6-dev"
-    Base.linearindexing{ScalarT,N}(::Type{View{ScalarT,N,PtrWrapper{ScalarT,N}}}) = Base.LinearFast()
-  else
-    Base.IndexStyle{ScalarT,N}(::Type{View{ScalarT,N,PtrWrapper{ScalarT,N}}}) = Base.IndexLinear()
+  function view{ST,LayoutT,SpaceT,N}(v::View3{Ptr{Ptr{ST}},LayoutT,SpaceT}, ndims::Type{Val{N}})
+    return PtrView{ST,N,LayoutT}(Kokkos.ptr_on_device(v),make_dimensions(v,ndims))
   end
 
-  Base.size{ScalarT,N}(v::View{ScalarT,N,PtrWrapper{ScalarT,N}}) = v.kokkos_view.size
-  Base.getindex{ScalarT,N}(v::View{ScalarT,N,PtrWrapper{ScalarT,N}}, i::Integer) = unsafe_load(v.kokkos_view.ptr,i)
-  Base.setindex!{ScalarT,N}(v::View{ScalarT,N,PtrWrapper{ScalarT,N}}, value, i::Integer) = unsafe_store!(v.kokkos_view.ptr,value,i)
+  function view{ST,LayoutT,SpaceT,N}(v::View4{Ptr{Ptr{ST}},LayoutT,SpaceT,Void}, ndims::Type{Val{N}})
+    return PtrView{ST,N,LayoutT}(Kokkos.ptr_on_device(v),make_dimensions(v,ndims))
+  end
+
+  # Array interface, 0-based for consistency with global-to-local index mapping
+  @compat Base.IndexStyle{ScalarT,N,LayoutT}(::Type{PtrView{ScalarT,N,LayoutT}}) = IndexLinear()
+  Base.indices{ScalarT,N}(v::PtrView{ScalarT,N,LayoutLeft}) = map(ZeroRange, v.size)
+  Base.indices{ScalarT,N}(v::PtrView{ScalarT,N,LayoutLeft},d) = ZeroRange(v.size[d])
+  Base.getindex{ScalarT}(v::PtrView{ScalarT,1,LayoutLeft}, i::Integer) = unsafe_load(v.ptr,i+1)
+  Base.setindex!{ScalarT}(v::PtrView{ScalarT,1,LayoutLeft}, value, i::Integer) = unsafe_store!(v.ptr,value,i+1)
+  Base.getindex{ScalarT,N}(v::PtrView{ScalarT,N,LayoutLeft}, i::Integer) = unsafe_load(v.ptr,i)
+  Base.setindex!{ScalarT,N}(v::PtrView{ScalarT,N,LayoutLeft}, value, i::Integer) = unsafe_store!(v.ptr,value,i)
 end

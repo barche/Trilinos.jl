@@ -21,7 +21,11 @@
 #include <Teuchos_TimeMonitor.hpp>
 
 
-Teuchos::RCP<Teuchos::Time> assembly_time;
+Teuchos::RCP<Teuchos::Time> graph_time;
+Teuchos::RCP<Teuchos::Time> fill_time;
+Teuchos::RCP<Teuchos::Time> source_time;
+Teuchos::RCP<Teuchos::Time> dirichlet_time;
+Teuchos::RCP<Teuchos::Time> check_time;
 
 //#include <Galeri_XpetraMatrixTypes.hpp>
 
@@ -29,17 +33,43 @@ typedef double scalar_t;
 typedef int local_t;
 typedef int64_t global_t;
 
-local_t laplace2d_indices(global_t inds_array[5], const global_t i, const global_t nx, const global_t ny)
+struct CartesianGrid
 {
-  const global_t ix = i % nx;
-  const global_t iy = (i-ix) / nx;
+  global_t nx;
+  global_t ny;
+  scalar_t h;
+
+  global_t nnodes() const { return nx*ny; }
+
+  std::pair<global_t,global_t> xyindices(const global_t i) const
+  {
+    const global_t ix = i % nx;
+    return std::make_pair(ix, (i-ix) / nx);
+  }
+
+  std::pair<scalar_t,scalar_t> coordinates(const global_t i) const
+  {
+    const auto p = xyindices(i);
+    const global_t ix = p.first;
+    const global_t iy = p.second;
+    const scalar_t x_center = h*(nx-1)/2;
+    const scalar_t y_center = h*(ny-1)/2;
+    return std::make_pair(ix*h - x_center, iy*h - y_center);
+  }
+};
+
+local_t laplace2d_indices(global_t inds_array[5], const global_t i, const CartesianGrid& g)
+{
+  const auto p = g.xyindices(i);
+  const global_t ix = p.first;
+  const global_t iy = p.second;
 
   local_t n_inds = 0;
   inds_array[n_inds] = i;
-  if(iy != ny-1)
+  if(iy != g.ny-1)
   {
       n_inds += 1;
-      inds_array[n_inds] = i+nx;
+      inds_array[n_inds] = i+g.nx;
   }
   if(ix != 0)
   {
@@ -49,9 +79,9 @@ local_t laplace2d_indices(global_t inds_array[5], const global_t i, const global
   if(iy != 0)
   {
       n_inds += 1;
-      inds_array[n_inds] = i-nx;
+      inds_array[n_inds] = i-g.nx;
   }
-  if(ix != nx-1)
+  if(ix != g.nx-1)
   {
       n_inds += 1;
       inds_array[n_inds] = i+1;
@@ -59,12 +89,47 @@ local_t laplace2d_indices(global_t inds_array[5], const global_t i, const global
   return n_inds+1;
 }
 
-template<typename MatrixT>
-void fill_laplace2d(MatrixT& A, const global_t nx, const global_t ny)
+template<typename VectorT>
+void set_source_term(VectorT& b, const CartesianGrid& g)
 {
-  Teuchos::TimeMonitor local_timer(*assembly_time);
+  Teuchos::TimeMonitor local_timer(*source_time);
+  const auto& rowmap = *b.getMap();
+  auto b_view = b.template getLocalView<typename VectorT::dual_view_type::t_dev>();
+  const local_t n_my_elms = rowmap.getNodeNumElements();
+  for(local_t i = 0; i != n_my_elms; ++i)
+  {
+    const global_t gid = rowmap.getGlobalElement(i);
+    const auto p = g.coordinates(gid);
+    const scalar_t x = p.first;
+    const scalar_t y = p.second;
+    b_view(i,0) = 2*g.h*g.h*((1-x*x)+(1-y*y));
+  }
+}
+
+template<typename GraphT>
+void graph_laplace2d(GraphT& A, const CartesianGrid& g)
+{
+  Teuchos::TimeMonitor local_timer(*graph_time);
   const auto& rowmap = *A.getRowMap();
   local_t n_my_elms = rowmap.getNodeNumElements();
+
+  // storage for the per-row values
+  global_t row_indices[5] = {0,0,0,0,0};
+
+  for(local_t i = 0; i != n_my_elms; ++i)
+  {
+    const global_t global_row = rowmap.getGlobalElement(i);
+    const local_t row_n_elems = laplace2d_indices(row_indices, global_row, g);
+    A.insertGlobalIndices(global_row, Teuchos::ArrayView<global_t>(row_indices,row_n_elems));
+  }
+}
+
+template<typename MatrixT>
+void fill_laplace2d(MatrixT& A, const CartesianGrid& g)
+{
+  Teuchos::TimeMonitor local_timer(*fill_time);
+  const auto& rowmap = *A.getRowMap();
+  const local_t n_my_elms = rowmap.getNodeNumElements();
 
   // storage for the per-row values
   global_t row_indices[5] = {0,0,0,0,0};
@@ -72,71 +137,152 @@ void fill_laplace2d(MatrixT& A, const global_t nx, const global_t ny)
 
   for(local_t i = 0; i != n_my_elms; ++i)
   {
-    global_t global_row = rowmap.getGlobalElement(i);
-    local_t row_n_elems = laplace2d_indices(row_indices, global_row, nx, ny);
+    const global_t global_row = rowmap.getGlobalElement(i);
+    const local_t row_n_elems = laplace2d_indices(row_indices, global_row, g);
     row_values[0] = 4.0 - (5-row_n_elems);
-    A.insertGlobalValues(global_row, Teuchos::ArrayView<global_t>(row_indices,row_n_elems), Teuchos::ArrayView<scalar_t>(row_values,row_n_elems));
+    A.replaceGlobalValues(global_row, Teuchos::ArrayView<global_t>(row_indices,row_n_elems), Teuchos::ArrayView<scalar_t>(row_values,row_n_elems));
   }
 }
 
-template<typename comm_t>
-void laplace2d(comm_t comm, const global_t nx, const global_t ny)
+template<typename MatrixT, typename VectorT>
+void set_dirichlet(MatrixT& A, VectorT& b, const CartesianGrid& g)
 {
-  auto map = Teuchos::rcp(new Tpetra::Map<local_t,global_t>(nx*ny, 0, comm));
+  Teuchos::TimeMonitor local_timer(*dirichlet_time);
+  const auto& rowmap = *A.getRowMap();
+  global_t row_indices[5] = {0,0,0,0,0};
+  scalar_t row_values[5] = {1.0,0.0,0.0,0.0,0.0};
+
+  auto b_view = b.template getLocalView<typename VectorT::dual_view_type::t_dev>();
+
+  // reserve space for the boundary nodes
+  std::vector<global_t> boundary_gids;
+  boundary_gids.reserve((2*(g.nx+g.ny)));
+
+  // left and right
+  for(global_t iy = 0; iy != g.ny; ++iy)
+  {
+    boundary_gids.push_back(iy*g.nx);
+    boundary_gids.push_back(boundary_gids.back() + g.nx-1);
+  }
+
+  // top and bottom
+  for(global_t ix = 0; ix != g.nx; ++ix)
+  {
+    boundary_gids.push_back(ix);
+    boundary_gids.push_back(ix + (g.ny-1)*g.nx);
+  }
+
+  // Apply BC
+  for(const global_t gid : boundary_gids)
+  {
+    const auto p = g.coordinates(gid);
+    const scalar_t x = p.first;
+    const scalar_t y = p.second;
+    if(rowmap.isNodeGlobalElement(gid))
+    {
+      const local_t row_n_elems = laplace2d_indices(row_indices, gid, g);
+      A.replaceGlobalValues(gid, Teuchos::ArrayView<global_t>(row_indices,row_n_elems), Teuchos::ArrayView<scalar_t>(row_values,row_n_elems));
+      b_view(rowmap.getLocalElement(gid),0) = (1-x*x)*(1-y*y);
+    }
+  }
+}
+
+template<typename VectorT>
+bool check_solution(VectorT& sol, const CartesianGrid& g)
+{
+  Teuchos::TimeMonitor local_timer(*check_time);
+  const auto& solmap = *sol.getMap();
+  const local_t n_my_elms = solmap.getNodeNumElements();
+
+  auto solview = sol.template getLocalView<typename VectorT::dual_view_type::t_dev>();
+  global_t result = 0;
+  for(local_t i = 0; i != n_my_elms; ++i)
+  {
+    const global_t gid = solmap.getGlobalElement(i);
+    const auto p = g.coordinates(gid);
+    const scalar_t x = p.first;
+    const scalar_t y = p.second;
+    result += std::abs(solview(i,0) - (1-x*x)*(1-y*y)) > 1e-7;
+  }
+  return result == 0;
+}
+
+template<typename comm_t>
+void laplace2d(comm_t comm, const CartesianGrid& g, const bool solve = false)
+{
+  auto map = Teuchos::rcp(new Tpetra::Map<local_t,global_t>(g.nnodes(), 0, comm));
   typedef Tpetra::Map<local_t,global_t>::node_type node_t;
 
+  auto matrix_graph = Teuchos::rcp(new Tpetra::CrsGraph<local_t,global_t>(map, 0));
+  graph_laplace2d(*matrix_graph, g);
+  matrix_graph->fillComplete();
+
+  auto b = Teuchos::rcp(new Tpetra::Vector<scalar_t, local_t, global_t>(matrix_graph->getRangeMap()));
+  set_source_term(*b,g);
+
   // Matrix construction and fill
-  auto A = Teuchos::rcp(new Tpetra::CrsMatrix<scalar_t,local_t,global_t>(map, 0));
-  fill_laplace2d(*A, nx, ny);
+  auto A = Teuchos::rcp(new Tpetra::CrsMatrix<scalar_t,local_t,global_t>(matrix_graph));
+  A->resumeFill();
+  fill_laplace2d(*A, g);
+  set_dirichlet(*A,*b,g);
   A->fillComplete();
 
-  //A->describe(*Teuchos::VerboseObjectBase::getDefaultOStream(), Teuchos::VERB_EXTREME);
+  if(solve)
+  {
+    //b->describe(*Teuchos::VerboseObjectBase::getDefaultOStream(), Teuchos::VERB_EXTREME);
+    //A->describe(*Teuchos::VerboseObjectBase::getDefaultOStream(), Teuchos::VERB_EXTREME);
+    // Storage for the solution
+    auto x = Teuchos::rcp(new Tpetra::Vector<scalar_t, local_t, global_t>(A->getDomainMap()));
 
-  //-------------------------- Check with Galeri assembly
-  // auto A_galeri = Galeri::Xpetra::Cross2D<scalar_t, local_t, global_t, Tpetra::Map<local_t,global_t>, Tpetra::CrsMatrix<scalar_t,local_t,global_t>>(map, nx, ny, 4.0, -1.0, -1.0, -1.0, -1.0);
-  // A_galeri->describe(*Teuchos::VerboseObjectBase::getDefaultOStream(), Teuchos::VERB_EXTREME);
-  //--------------------------
+    auto lows_factory = Thyra::BelosLinearOpWithSolveFactory<scalar_t>();
+    auto pl = Teuchos::rcp(new Teuchos::ParameterList());
+    pl->set("Solver Type", "Block GMRES");
+    Teuchos::ParameterList& solver_pl = pl->sublist("Solver Types").sublist("Block GMRES");
+    solver_pl.set("Convergence Tolerance", 1e-12);
+    solver_pl.set("Maximum Iterations", 1000);
+    solver_pl.set("Num Blocks", 1000);
+    lows_factory.setParameterList(pl);
+    lows_factory.setVerbLevel(Teuchos::VERB_HIGH);
+    auto lows = lows_factory.createOp();
 
-  // reference solution and RHS
-  auto x_ref = Teuchos::rcp(new Tpetra::Vector<scalar_t, local_t, global_t>(A->getDomainMap()));
-  auto b = Teuchos::rcp(new Tpetra::Vector<scalar_t, local_t, global_t>(A->getRangeMap()));
+    auto rangespace = Thyra::tpetraVectorSpace<scalar_t>(A->getRangeMap());
+    auto domainspace = Thyra::tpetraVectorSpace<scalar_t>(A->getDomainMap());
+    const Teuchos::RCP<const Thyra::LinearOpBase<scalar_t>> A_thyra = Thyra::tpetraLinearOp(Teuchos::RCP<const Thyra::VectorSpaceBase<scalar_t>>(rangespace), Teuchos::RCP<const Thyra::VectorSpaceBase<scalar_t>>(domainspace), Teuchos::RCP<Tpetra::Operator<scalar_t,local_t,global_t>>(A));
+    Thyra::initializeOp(lows_factory, A_thyra, lows.ptr());
 
-  // Construct RHS from reference solution
-  x_ref->randomize();
-  A->apply(*x_ref, *b);
+    const Teuchos::RCP<Thyra::MultiVectorBase<scalar_t>> x_th = Thyra::tpetraVector<scalar_t,local_t,global_t,node_t>(domainspace, x);
+    const Teuchos::RCP<Thyra::MultiVectorBase<scalar_t>> b_th = Thyra::tpetraVector<scalar_t,local_t,global_t,node_t>(rangespace, b);
 
-  // Storage for the solution
-  auto x = Teuchos::rcp(new Tpetra::Vector<scalar_t, local_t, global_t>(A->getDomainMap()));
+    auto status = Thyra::solve(*lows, Thyra::NOTRANS, *b_th, x_th.ptr());
 
-  auto lows_factory = Thyra::BelosLinearOpWithSolveFactory<scalar_t>();
-  auto pl = Teuchos::rcp(new Teuchos::ParameterList());
-  lows_factory.setParameterList(pl);
-  lows_factory.setVerbLevel(Teuchos::VERB_HIGH);
-  auto lows = lows_factory.createOp();
-
-  auto rangespace = Thyra::tpetraVectorSpace<scalar_t>(A->getRangeMap());
-  auto domainspace = Thyra::tpetraVectorSpace<scalar_t>(A->getDomainMap());
-  const Teuchos::RCP<const Thyra::LinearOpBase<scalar_t>> A_thyra = Thyra::tpetraLinearOp(Teuchos::RCP<const Thyra::VectorSpaceBase<scalar_t>>(rangespace), Teuchos::RCP<const Thyra::VectorSpaceBase<scalar_t>>(domainspace), Teuchos::RCP<Tpetra::Operator<scalar_t,local_t,global_t>>(A));
-  Thyra::initializeOp(lows_factory, A_thyra, lows.ptr());
-
-  const Teuchos::RCP<Thyra::MultiVectorBase<scalar_t>> x_th = Thyra::tpetraVector<scalar_t,local_t,global_t,node_t>(domainspace, x);
-  const Teuchos::RCP<Thyra::MultiVectorBase<scalar_t>> b_th = Thyra::tpetraVector<scalar_t,local_t,global_t,node_t>(rangespace, b);
-
-  auto status = Thyra::solve(*lows, Thyra::NOTRANS, *b_th, x_th.ptr());
+    if(!check_solution(*x,g))
+    {
+      std::cout << "ERROR: wrong solution!" << std::endl;
+    }
+  }
 }
 
 int main (int argc, char *argv[])
 {
-  assembly_time = Teuchos::TimeMonitor::getNewCounter("Assembly time");
+  graph_time = Teuchos::TimeMonitor::getNewCounter("Graph construction time");
+  fill_time = Teuchos::TimeMonitor::getNewCounter("Matrix fill time");
+  source_time = Teuchos::TimeMonitor::getNewCounter("Source term time");
+  dirichlet_time = Teuchos::TimeMonitor::getNewCounter("Dirichlet time");
+  check_time = Teuchos::TimeMonitor::getNewCounter("Check solution time");
 
   Teuchos::oblackholestream blackhole;
   Teuchos::GlobalMPISession mpiSession (&argc, &argv, &blackhole);
   Teuchos::RCP<const Teuchos::Comm<int> > comm = Tpetra::DefaultPlatform::getDefaultPlatform ().getComm ();
 
-  laplace2d(comm, 200, 20);
-  laplace2d(comm, 200, 20);
-  laplace2d(comm, 200, 20);
+  CartesianGrid grid = {101,41,1.0/50.0};
 
+  laplace2d(comm, grid);
+  Teuchos::TimeMonitor::report(std::cout);
+  Teuchos::TimeMonitor::zeroOutTimers();
+  laplace2d(comm, grid);
+  Teuchos::TimeMonitor::report(std::cout);
+  Teuchos::TimeMonitor::zeroOutTimers();
+  laplace2d(comm, grid, true);
   Teuchos::TimeMonitor::report(std::cout);
 
   return 0;

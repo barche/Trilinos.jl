@@ -55,9 +55,9 @@ function set_source_term!(b, g::CartesianGrid)
   rowmap = Tpetra.getMap(b)
   b_view = Tpetra.device_view(b)
   n_my_elms = Tpetra.getNodeNumElements(rowmap)
-  @assert n_my_elms == length(b_view)
-  for i in 1:n_my_elms
-    gid = Tpetra.getGlobalElement(rowmap,i-1)
+  @assert n_my_elms == length(linearindices(b_view))
+  for i in linearindices(b_view)
+    gid = Tpetra.getGlobalElement(rowmap,i)
     (x,y) = coordinates(g,gid)
     b_view[i] = 2*g.h^2*((1-x^2)+(1-y^2))
   end
@@ -124,7 +124,7 @@ function set_dirichlet!(A, b, g::CartesianGrid)
     if Tpetra.isNodeGlobalElement(rowmap, gid)
       row_n_elems = laplace2d_indices!(row_indices, gid, g)
       Tpetra.replaceGlobalValues(A, gid, Teuchos.ArrayView(row_indices,row_n_elems), Teuchos.ArrayView(row_values,row_n_elems))
-      b_view[Tpetra.getLocalElement(rowmap, gid)+1] = (1-x^2)*(1-y^2)
+      b_view[Tpetra.getLocalElement(rowmap, gid)] = (1-x^2)*(1-y^2)
     end
   end
 end
@@ -132,11 +132,13 @@ end
 function check_solution(sol, g::CartesianGrid)
   solmap = Tpetra.getMap(sol)
   solview = Tpetra.device_view(sol)
-  for i in 1:length(solview)
-    gid = Tpetra.getGlobalElement(solmap, i-1)
+  result = 0
+  for i in linearindices(solview)
+    gid = Tpetra.getGlobalElement(solmap, i)
     (x,y) = coordinates(g,gid)
-    @test solview[i] ≈ (1-x^2)*(1-y^2)
+    result +=  abs(solview[i] - (1-x^2)*(1-y^2)) > 1e-10
   end
+  return result == 0
 end
 
 """
@@ -148,6 +150,7 @@ function laplace2d(comm, g::CartesianGrid)
 
   # Construct graph (i.e. the sparsity pattern)
   matrix_graph = Tpetra.CrsGraph(rowmap, 0)
+  println("-----------------------------------")
   println("Graph construction time:")
   @time graph_laplace2d!(matrix_graph, g)
   Tpetra.fillComplete(matrix_graph)
@@ -176,9 +179,8 @@ function laplace2d(comm, g::CartesianGrid)
   solver_pl["Convergence Tolerance"] = 1e-12
   solver_pl["Maximum Iterations"] = Int32(1000)
   solver_pl["Num Blocks"] = Int32(1000)
-  solver_pl["prec"] = Int32(1000)
 
-  lows = Thyra.LinearOpWithSolve(A, pl, Teuchos.VERB_MEDIUM)
+  lows = Thyra.LinearOpWithSolve(A, pl, Teuchos.VERB_DEFAULT)
 
   return (lows,b)
 end
@@ -194,6 +196,9 @@ function solve_laplace2d(comm)
   # Compute the solution
   sol = lows \ b
 
+  @test check_solution(sol, grid)
+  println("-----------------------------------")
+  println("test time:")
   @time check_solution(sol, grid)
   @time check_solution(sol, grid)
   @time check_solution(sol, grid)
@@ -207,10 +212,16 @@ end
 MPI.Init()
 comm = Teuchos.MpiComm(MPI.CComm(MPI.COMM_WORLD))
 
+my_rank = Teuchos.getRank(comm)
+if my_rank != 0
+  redirect_stdout(open("/dev/null", "w"))
+  redirect_stderr(open("/dev/null", "w"))
+end
+
 (x,y,φ) = solve_laplace2d(comm)
 
 if isinteractive()
-using Plots
+# using Plots
 # sol2d = zeros(grid.ny,grid.nx)
 # for i in 1:length(sol_view)
 #   gid = Tpetra.getGlobalElement(sol_map, i-1)

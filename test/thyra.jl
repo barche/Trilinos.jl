@@ -42,7 +42,7 @@ x2 = lows2 \ b
 # Check result
 bv = Tpetra.device_view(b)
 xv = Tpetra.device_view(x2)
-@test length(bv) == length(xv)
+@test length(linearindices(bv)) == length(linearindices(xv))
 for (bi,xi) in zip(bv,xv)
   @test bi ≈ xi
 end

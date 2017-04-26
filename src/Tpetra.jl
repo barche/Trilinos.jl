@@ -55,40 +55,23 @@ apply{ST,LT,GT,NT}(A::CxxUnion{CrsMatrix{ST,LT,GT,NT}},
                    β::Number=0) = _apply(A,X,Y,mode,α,β)
 
 """
-Gets an AbstractArray-compatible device view of the whole multivector. Calls getLocalView internally.
+Gets an AbstractArray-compatible device view of the local part of the multivector. Calls getLocalView internally.
 """
-device_view{ST,LT,GT,NT}(mv::CxxUnion{MultiVector{ST,LT,GT,NT}}) = _get_view(mv, device_view_type(mv))
+device_view{ST,LT,GT,NT}(mv::CxxUnion{MultiVector{ST,LT,GT,NT}}) = Kokkos.view(getLocalView(device_view_type(mv),mv),Val{2})
 
 """
-Gets an AbstractArray-compatible host view of the whole multivector. Calls getLocalView internally.
+Gets an AbstractArray-compatible host view of the local part of the multivector. Calls getLocalView internally.
 """
-host_view{ST,LT,GT,NT}(mv::CxxUnion{MultiVector{ST,LT,GT,NT}}) = _get_view(mv, host_view_type(mv))
+host_view{ST,LT,GT,NT}(mv::CxxUnion{MultiVector{ST,LT,GT,NT}}) = Kokkos.view(getLocalView(host_view_type(mv),mv),Val{2})
 
 """
-Gets an AbstractArray-compatible device view of the whole vector. Calls getLocalView internally.
+Gets an AbstractArray-compatible device view of the local part of the vector. Calls getLocalView internally.
 """
-device_view{ST,LT,GT,NT}(v::CxxUnion{Vector{ST,LT,GT,NT}}) = _get_view(v, device_view_type(v))
+device_view{ST,LT,GT,NT}(v::CxxUnion{Vector{ST,LT,GT,NT}}) = Kokkos.view(getLocalView(device_view_type(v),v),Val{1})
 
 """
-Gets an AbstractArray-compatible host view of the whole vector. Calls getLocalView internally.
+Gets an AbstractArray-compatible host view of the local part of the vector. Calls getLocalView internally.
 """
-host_view{ST,LT,GT,NT}(v::CxxUnion{Vector{ST,LT,GT,NT}}) = _get_view(v, host_view_type(v))
-
-
-#internal methods
-_get_view{ST,LT,GT,NT}(mv::CxxUnion{MultiVector{ST,LT,GT,NT}}, view_type) = Kokkos.View(ST, Val{2}, getLocalView(view_type, mv))
-_get_view{ST,LT,GT,NT}(mv::CxxUnion{Vector{ST,LT,GT,NT}}, view_type) = Kokkos.View(ST, Val{1}, getLocalView(view_type, mv))
-
-@compat PtrViewTypes{ArrayT,DeviceT} = Union{Type{Kokkos.View3{ArrayT, Kokkos.LayoutLeft, DeviceT}}, Type{Kokkos.View4{ArrayT, Kokkos.LayoutLeft, DeviceT, Void}}}
-function _get_view{ST,LT,GT,NT,ArrayT,DeviceT}(mv::CxxUnion{MultiVector{ST,LT,GT,NT}}, view_type::PtrViewTypes{ArrayT,DeviceT})
-  localview = getLocalView(view_type, mv)
-  sizes = (Int(Kokkos.dimension(localview,0)),Int(Kokkos.dimension(localview,1)))
-  return Kokkos.View(ST, Val{2}, Kokkos.PtrWrapper(Kokkos.ptr_on_device(localview), sizes))
- end
-function _get_view{ST,LT,GT,NT,ArrayT,DeviceT}(mv::CxxUnion{Vector{ST,LT,GT,NT}}, view_type::PtrViewTypes{ArrayT,DeviceT})
-  localview = getLocalView(view_type, mv)
-  sizes = (Int(Kokkos.dimension(localview,0)),)
-  return Kokkos.View(ST, Val{1}, Kokkos.PtrWrapper(Kokkos.ptr_on_device(localview), sizes))
-end
+host_view{ST,LT,GT,NT}(v::CxxUnion{Vector{ST,LT,GT,NT}}) = Kokkos.view(getLocalView(host_view_type(v),v),Val{1})
 
 end

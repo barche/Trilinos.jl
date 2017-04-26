@@ -49,6 +49,11 @@ struct WrapMap
     wrapped.method("getGlobalElement", &WrappedT::getGlobalElement);
     wrapped.method("getLocalElement", &WrappedT::getLocalElement);
     wrapped.method("isNodeGlobalElement", &WrappedT::isNodeGlobalElement);
+    wrapped.method("getIndexBase", &WrappedT::getIndexBase);
+    wrapped.method("getMinLocalIndex", &WrappedT::getMinLocalIndex);
+    wrapped.method("getMaxLocalIndex", &WrappedT::getMaxLocalIndex);
+    wrapped.method("getMinGlobalIndex", &WrappedT::getMinGlobalIndex);
+    wrapped.method("getMaxGlobalIndex", &WrappedT::getMaxGlobalIndex);
   }
 };
 
