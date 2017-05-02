@@ -112,6 +112,7 @@ struct WrapCrsMatrix
     wrapped.method("getNumEntriesInGlobalRow", &WrappedT::getNumEntriesInGlobalRow);
     wrapped.method("getGlobalRowCopy", &WrappedT::getGlobalRowCopy);
     wrapped.method("replaceGlobalValues", static_cast<local_ordinal_type (WrappedT::*)(const global_ordinal_type, const Teuchos::ArrayView<const global_ordinal_type>&, const Teuchos::ArrayView<const scalar_type>&) const>(&WrappedT::replaceGlobalValues));
+    wrapped.method("replaceLocalValues", static_cast<local_ordinal_type (WrappedT::*)(const local_ordinal_type, const Teuchos::ArrayView<const local_ordinal_type>&, const Teuchos::ArrayView<const scalar_type>&) const>(&WrappedT::replaceLocalValues));
     wrapped.method("getFrobeniusNorm", &WrappedT::getFrobeniusNorm);
     wrapped.method("apply", &WrappedT::apply);
 

@@ -3,6 +3,46 @@ using Trilinos
 using Base.Test
 using Compat
 
+const USE_LOCAL_INDICES = !isempty(ARGS) && ARGS[1] == "local"
+
+@static if USE_LOCAL_INDICES
+  @compat const IdxT = Int32
+else
+  @compat const IdxT = Int
+end
+
+function replace_values(A, gid, indices, values)
+  @static if USE_LOCAL_INDICES
+    return Tpetra.replaceLocalValues(A, gid, indices, values)
+  else
+    return Tpetra.replaceGlobalValues(A, gid, indices, values)
+  end
+end
+
+function global_element(rowmap,i)
+  @static if USE_LOCAL_INDICES
+    return Int(i)
+  else
+    return Tpetra.getGlobalElement(rowmap,i)
+  end
+end
+
+function local_element(rowmap,gid)
+  @static if USE_LOCAL_INDICES
+    return gid
+  else
+    return Tpetra.getLocalElement(rowmap,gid)
+  end
+end
+
+function is_node_global_element(rowmap,gid)
+  @static if USE_LOCAL_INDICES
+    return true
+  else
+    return Tpetra.isNodeGlobalElement(rowmap,gid)
+  end
+end
+
 immutable CartesianGrid
   nx::Int # Number of points in the X direction
   ny::Int # Number of points in the Y direction
@@ -57,7 +97,7 @@ function set_source_term!(b, g::CartesianGrid)
   n_my_elms = Tpetra.getNodeNumElements(rowmap)
   @assert n_my_elms == length(linearindices(b_view))
   for i in linearindices(b_view)
-    gid = Tpetra.getGlobalElement(rowmap,i)
+    gid = global_element(rowmap,i)
     (x,y) = coordinates(g,gid)
     b_view[i] = 2*g.h^2*((1-x^2)+(1-y^2))
   end
@@ -71,7 +111,7 @@ function graph_laplace2d!(crsgraph, g::CartesianGrid)
   row_indices = [0,0,0,0,0]
 
   for i in 0:n_my_elms-1
-    global_row = Tpetra.getGlobalElement(rowmap,i)
+    global_row = global_element(rowmap,i)
     row_n_elems = laplace2d_indices!(row_indices, global_row, g)
     Tpetra.insertGlobalIndices(crsgraph, global_row, Teuchos.ArrayView(row_indices,row_n_elems))
   end
@@ -82,21 +122,21 @@ function fill_laplace2d!(A, g::CartesianGrid)
   n_my_elms = Tpetra.getNodeNumElements(rowmap)
 
   # storage for the per-row values
-  row_indices = [0,0,0,0,0]
+  row_indices = IdxT[0,0,0,0,0]
   row_values = [4.0,-1.0,-1.0,-1.0,-1.0]
 
   for i in 0:n_my_elms-1
-    global_row = Tpetra.getGlobalElement(rowmap,i)
+    global_row = global_element(rowmap,i)
     row_n_elems = laplace2d_indices!(row_indices, global_row, g)
     row_values[1] = 4.0 - (5-row_n_elems)
-    Tpetra.replaceGlobalValues(A, global_row, Teuchos.ArrayView(row_indices,row_n_elems), Teuchos.ArrayView(row_values,row_n_elems))
+    replace_values(A, global_row, Teuchos.ArrayView(row_indices,row_n_elems), Teuchos.ArrayView(row_values,row_n_elems))
   end
 end
 
 # Ensure a dirichlet condition (1 at the diagonal) for the boundaries
 function set_dirichlet!(A, b, g::CartesianGrid)
   rowmap = Tpetra.getRowMap(A)
-  row_indices = [0,0,0,0,0]
+  row_indices = IdxT[0,0,0,0,0]
   row_values = [1.0,0.0,0.0,0.0,0.0]
 
   b_view = Tpetra.device_view(b)
@@ -121,10 +161,10 @@ function set_dirichlet!(A, b, g::CartesianGrid)
   # apply
   for gid in boundary_gids
     (x,y) = coordinates(g,gid)
-    if Tpetra.isNodeGlobalElement(rowmap, gid)
+    if is_node_global_element(rowmap, gid)
       row_n_elems = laplace2d_indices!(row_indices, gid, g)
-      Tpetra.replaceGlobalValues(A, gid, Teuchos.ArrayView(row_indices,row_n_elems), Teuchos.ArrayView(row_values,row_n_elems))
-      b_view[Tpetra.getLocalElement(rowmap, gid)] = (1-x^2)*(1-y^2)
+      replace_values(A, gid, Teuchos.ArrayView(row_indices,row_n_elems), Teuchos.ArrayView(row_values,row_n_elems))
+      b_view[local_element(rowmap, gid)] = (1-x^2)*(1-y^2)
     end
   end
 end
@@ -134,7 +174,7 @@ function check_solution(sol, g::CartesianGrid)
   solview = Tpetra.device_view(sol)
   result = 0
   for i in linearindices(solview)
-    gid = Tpetra.getGlobalElement(solmap, i)
+    gid = global_element(solmap, i)
     (x,y) = coordinates(g,gid)
     result +=  abs(solview[i] - (1-x^2)*(1-y^2)) > 1e-10
   end
@@ -218,13 +258,18 @@ if my_rank != 0
   redirect_stderr(open("/dev/null", "w"))
 end
 
+nb_procs = Teuchos.getSize(comm)
+if USE_LOCAL_INDICES && nb_procs > 1
+  error("Local indices may only be used on single core execution")
+end
+
 (x,y,φ) = solve_laplace2d(comm)
 
 if isinteractive()
 # using Plots
 # sol2d = zeros(grid.ny,grid.nx)
 # for i in 1:length(sol_view)
-#   gid = Tpetra.getGlobalElement(sol_map, i-1)
+#   gid = global_element(sol_map, i-1)
 #   (ix,iy) = xyindices(grid,gid)
 #   sol2d[iy+1,ix+1] = sol_view[i]
 # end
