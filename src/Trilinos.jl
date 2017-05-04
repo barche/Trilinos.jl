@@ -1,5 +1,6 @@
 module Trilinos
 
+export Belos
 export Kokkos
 export Teuchos
 export Tpetra
@@ -25,9 +26,11 @@ end
 include("Teuchos.jl")
 include("Kokkos.jl")
 include("Tpetra.jl")
+include("Belos.jl")
 include("Thyra.jl")
 include("Benchmark.jl")
 include("Testing.jl")
 
+include("Solve.jl")
 
 end # module

@@ -6,6 +6,7 @@ namespace trilinoswrap
 extern void register_kokkos(cxx_wrap::Module& mod);
 extern void register_teuchos(cxx_wrap::Module& mod);
 extern void register_tpetra(cxx_wrap::Module& mod);
+extern void register_belos(cxx_wrap::Module& mod);
 extern void register_thyra(cxx_wrap::Module& mod);
 
 extern void register_benchmark(cxx_wrap::Module& mod);
@@ -28,6 +29,10 @@ JULIA_CPP_MODULE_BEGIN(registry)
   if(cxx_wrap::symbol_name(jl_current_module->name) == "Tpetra")
   {
     trilinoswrap::register_tpetra(registry.create_module("Tpetra"));
+  }
+  if(cxx_wrap::symbol_name(jl_current_module->name) == "Belos")
+  {
+    trilinoswrap::register_belos(registry.create_module("Belos"));
   }
   if(cxx_wrap::symbol_name(jl_current_module->name) == "Thyra")
   {

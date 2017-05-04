@@ -203,11 +203,13 @@ function laplace2d(comm, g::CartesianGrid)
   # Matrix construction
   A = Tpetra.CrsMatrix(matrix_graph)
   Tpetra.resumeFill(A)
+  @test Tpetra.isLocallyIndexed(A)
   println("Matrix fill time:")
   @time fill_laplace2d!(A,g)
   println("Dirichlet time:")
   @time set_dirichlet!(A,b,g)
   Tpetra.fillComplete(A)
+  @test Tpetra.isLocallyIndexed(A)
 
   # This prints the matrix if uncommented
   # Tpetra.describe(A, Teuchos.VERB_EXTREME)

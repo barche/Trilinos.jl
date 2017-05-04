@@ -115,6 +115,8 @@ struct WrapCrsMatrix
     wrapped.method("replaceLocalValues", static_cast<local_ordinal_type (WrappedT::*)(const local_ordinal_type, const Teuchos::ArrayView<const local_ordinal_type>&, const Teuchos::ArrayView<const scalar_type>&) const>(&WrappedT::replaceLocalValues));
     wrapped.method("getFrobeniusNorm", &WrappedT::getFrobeniusNorm);
     wrapped.method("apply", &WrappedT::apply);
+    wrapped.method("isLocallyIndexed", &WrappedT::isLocallyIndexed);
+    wrapped.method("isGloballyIndexed", &WrappedT::isGloballyIndexed);
 
     wrapped.module().method("CrsMatrix", [](const Teuchos::RCP<const typename WrappedT::map_type>& rowmap, const std::size_t max_num_entries_per_row)
     {

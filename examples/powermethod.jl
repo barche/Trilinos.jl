@@ -65,7 +65,6 @@ println("Number of elements for rank $my_rank is $num_my_elements")
 
 # Construct the matrix
 A = Tpetra.CrsMatrix(map, 0)
-
 for local_row in 0:num_my_elements-1
   global_row = Tpetra.getGlobalElement(map, local_row)
   if global_row == 0
