@@ -16,11 +16,11 @@ end
 
 @BinDeps.setup
 
-cxx_wrap_dir = Pkg.dir("CxxWrap","deps","usr","lib","cmake")
+jlcxx_dir = Pkg.dir("CxxWrap","deps","usr","share","cmake")
 
 trilinoswrap = library_dependency("trilinoswrap", aliases=["libtrilinoswrap"])
 
-cmake_prefix = TRILINOS_ROOT
+cmake_prefix = (TRILINOS_ROOT == "" ? "" : ";")*jlcxx_dir
 
 prefix=joinpath(BinDeps.depsdir(trilinoswrap),"usr")
 trilinoswrap_srcdir = joinpath(BinDeps.depsdir(trilinoswrap),"src","trilinoswrap")
@@ -48,7 +48,7 @@ end
 build_type = get(ENV, "CXXWRAP_BUILD_TYPE", "Release")
 
 trilinos_steps = @build_steps begin
-	`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DCMAKE_PREFIX_PATH="$cmake_prefix" -DCxxWrap_DIR="$cxx_wrap_dir" -DCMAKE_CXX_COMPILER=mpic++ -DCMAKE_C_COMPILER=mpicc $trilinoswrap_srcdir`
+	`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DCMAKE_PREFIX_PATH="$cmake_prefix" -DCMAKE_CXX_COMPILER=mpic++ -DCMAKE_C_COMPILER=mpicc $trilinoswrap_srcdir`
 	`cmake --build . --config $build_type --target install $makeopts`
 end
 

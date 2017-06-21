@@ -16,12 +16,21 @@ b = Tpetra.Vector(Tpetra.getRangeMap(A))
 Tpetra.randomize(x)
 Tpetra.randomize(b)
 
-const OpT = supertype(supertype(typeof(A[])))
-const MVT = supertype(supertype(typeof(b[])))
+@show const OpT = supertype(supertype(typeof(A[])))
+@show const MVT = supertype(supertype(typeof(b[])))
 
 solver_factory = Belos.SolverFactory{Float64, MVT, OpT}()
 solver = Belos.create(solver_factory, "GMRES", Teuchos.ParameterList())
 linprob = Belos.LinearProblem(A)
+
+# prec_factory = Ifpack2.Factory()
+# M = Ifpack2.create(prec_factory, "ILUT", A)
+# prec_params = Teuchos.ParameterList()
+# Ifpack2.setParameters(M, prec_params)
+# Ifpack2.initialize(M)
+# Ifpack2.compute(M)
+
+# Belos.setRightPrec(linprob, M)
 Belos.setProblem(linprob,x,b)
 Belos.setProblem(solver, linprob)
 

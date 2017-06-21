@@ -1,8 +1,8 @@
 #ifndef TRILINOS_JL_TEUCHOS_HPP
 #define TRILINOS_JL_TEUCHOS_HPP
 
-#include <array.hpp>
-#include <cxx_wrap.hpp>
+#include "jlcxx/array.hpp"
+#include "jlcxx/jlcxx.hpp"
 
 #include <Teuchos_ArrayViewDecl.hpp>
 #include <Teuchos_BLAS_types.hpp>
@@ -19,7 +19,7 @@ namespace trilinoswrap
   };
 }
 
-namespace cxx_wrap
+namespace jlcxx
 {
 
 template<> struct IsBits<MPI_Comm> : std::true_type {};
@@ -55,7 +55,7 @@ struct static_type_mapping<Teuchos::ArrayView<T>>
 {
   typedef typename std::remove_const<T>::type NonConstT;
   typedef trilinoswrap::ArrayViewMirror<T> type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)cxx_wrap::julia_type("ArrayView", "Teuchos"), jl_svec1(static_type_mapping<NonConstT>::julia_type())); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)jlcxx::julia_type("ArrayView", "Teuchos"), jl_svec1(static_type_mapping<NonConstT>::julia_type())); }
 };
 
 

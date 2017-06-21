@@ -1,10 +1,15 @@
 module Trilinos
 
+# Exports for package modules
 export Belos
+export Ifpack2
 export Kokkos
 export Teuchos
 export Tpetra
 export Thyra
+
+# Exports for extra functionality
+export TpetraSolver
 
 using CxxWrap
 using Compat
@@ -27,6 +32,7 @@ include("Teuchos.jl")
 include("Kokkos.jl")
 include("Tpetra.jl")
 include("Belos.jl")
+include("Ifpack2.jl")
 include("Thyra.jl")
 include("Benchmark.jl")
 include("Testing.jl")

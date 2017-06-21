@@ -1,4 +1,4 @@
-#include <cxx_wrap.hpp>
+#include "jlcxx/jlcxx.hpp"
 #include <mpi.h>
 
 #include <Thyra_BelosLinearOpWithSolveFactory.hpp>
@@ -15,7 +15,7 @@
 #include "teuchos.hpp"
 #include "tpetra.hpp"
 
-namespace cxx_wrap
+namespace jlcxx
 {
 
 template<> struct IsBits<Thyra::EOpTransp> : std::true_type {};
@@ -36,7 +36,7 @@ struct WrapTpetraLinOpInternal;
 template<typename ScalarT, typename LocalOrdinal, typename GlobalOrdinal, typename Node>
 struct WrapTpetraLinOpInternal<Thyra::TpetraLinearOp<ScalarT,LocalOrdinal,GlobalOrdinal,Node>>
 {
-  void operator()(cxx_wrap::Module& mod)
+  void operator()(jlcxx::Module& mod)
   {
     mod.method("tpetraVectorSpace", Thyra::tpetraVectorSpace<ScalarT,LocalOrdinal,GlobalOrdinal,Node>);
     mod.method("tpetraLinearOp", Thyra::tpetraLinearOp<ScalarT,LocalOrdinal,GlobalOrdinal,Node>);
@@ -80,7 +80,7 @@ struct WrapLOWSFactory
   {
     typedef typename TypeWrapperT::type WrappedT;
     typedef typename extract_scalar_type<WrappedT>::type Scalar;
-    wrapped.module().method("BelosLinearOpWithSolveFactory", [] (cxx_wrap::SingletonType<Scalar>) { return Teuchos::RCP<WrappedT>(new Thyra::BelosLinearOpWithSolveFactory<Scalar>()); });
+    wrapped.module().method("BelosLinearOpWithSolveFactory", [] (jlcxx::SingletonType<Scalar>) { return Teuchos::RCP<WrappedT>(new Thyra::BelosLinearOpWithSolveFactory<Scalar>()); });
     wrapped.module().method("setVerbLevel", [] (const WrappedT& w, const Teuchos::EVerbosityLevel level) { w.setVerbLevel(level); });
     wrapped.method("createOp", &WrappedT::createOp);
     wrapped.method("setParameterList", &WrappedT::setParameterList);
@@ -115,9 +115,9 @@ struct WrapNoOp
   }
 };
 
-void register_thyra(cxx_wrap::Module& mod)
+void register_thyra(jlcxx::Module& mod)
 {
-  using namespace cxx_wrap;
+  using namespace jlcxx;
 
   auto vecspace_base = mod.add_type<Parametric<TypeVar<1>>>("VectorSpaceBase");
   vecspace_base.apply_combination<Thyra::VectorSpaceBase, scalars_t>(WrapNoOp());

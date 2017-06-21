@@ -1,4 +1,4 @@
-#include <cxx_wrap.hpp>
+#include "jlcxx/jlcxx.hpp"
 #include <mpi.h>
 
 #include "teuchos.hpp"
@@ -21,9 +21,9 @@ int arrayview_sum(const Teuchos::ArrayView<T>& av)
 }
 
 // Some methods to test types that would otherwise be difficult to test directly
-void register_testing(cxx_wrap::Module& mod)
+void register_testing(jlcxx::Module& mod)
 {
-  using namespace cxx_wrap;
+  using namespace jlcxx;
 
   mod.method("arrayview_sum", arrayview_sum<double>);
 }

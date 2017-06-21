@@ -5,6 +5,8 @@ import .._l_trilinos_wrap
 
 export ParameterList
 
+import Base.get
+
 @compat abstract type PLAssociative <: CxxWrap.CppAssociative{String, Any} end
 
 immutable ArrayView{T}
@@ -23,9 +25,11 @@ CxxWrap.argument_overloads{T}(t::Type{ArrayView{T}}) = [AbstractArray{T,1}]
 
 wrap_module_functions(registry)
 
+const ParUnion = Union{CxxWrap.SmartPointer{ParameterList}, ParameterList}
+
 # High-level interface for ParameterList
-Base.length(pl::ptrunion(ParameterList)) = numParams(pl)
-function Base.getindex(pl::ptrunion(ParameterList), key)
+Base.length(pl::ParUnion) = numParams(pl)
+function Base.getindex(pl::ParUnion, key)
   if !isParameter(pl, key)
     throw(KeyError(key))
   end
@@ -34,10 +38,31 @@ function Base.getindex(pl::ptrunion(ParameterList), key)
   end
   return get(get_type(pl, key), pl, key)
 end
-Base.setindex!(pl::ptrunion(ParameterList), v, key) = set(pl, key, v)
-Base.keys(pl::ptrunion(ParameterList)) = keys(pl)
-Base.start(pl::ptrunion(ParameterList)) = (start(keys(pl)), keys(pl))
-Base.next(pl::ptrunion(ParameterList), state) = ((state[2][state[1]], pl[state[2][state[1]]]), (state[1]+1,state[2]))
-Base.done(pl::ptrunion(ParameterList), state) = state[1] == length(state[2])+1
+Base.setindex!(pl::ParUnion, v, key) = set(pl, key, v)
+Base.keys(pl::ParUnion) = keys(pl)
+Base.start(pl::ParUnion) = (start(keys(pl)), keys(pl))
+Base.next(pl::ParUnion, state) = ((state[2][state[1]], pl[state[2][state[1]]]), (state[1]+1,state[2]))
+Base.done(pl::ParUnion, state) = state[1] == length(state[2])+1
+
+get(pl::ParUnion, key, default_value) = isParameter(pl, key) ? pl[key] : default_value
+
+"""
+A pair of ParameterLists, one for input and one for storing the actually used parameters and any added default values
+"""
+immutable ParameterListPair
+  input::CxxWrap.SmartPointer{ParameterList}
+  output::ParUnion
+end
+
+function sublist(pl::ParameterListPair, name)
+  param_val = get(pl.input, name, Teuchos.ParameterList(name))
+  return ParameterListPair(param_val, Teuchos.sublist(pl.output, name))
+end
+
+function get(pl::ParameterListPair, key, default_value)
+  result = get(pl.input, key, default_value)
+  pl.output[key] = result
+  return result
+end
 
 end

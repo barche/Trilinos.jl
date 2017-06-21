@@ -1,4 +1,4 @@
-#include <cxx_wrap.hpp>
+#include "jlcxx/jlcxx.hpp"
 #include <mpi.h>
 
 #include "kokkos.hpp"
@@ -20,15 +20,15 @@ struct WrapView
     wrapped.method("dimension", &WrappedT::template dimension<int_t>);
     wrapped.method(&WrappedT::template operator()<int_t, int_t>);
     wrapped.method("ptr_on_device", &WrappedT::ptr_on_device);
-    wrapped.module().method("value_type", [] (cxx_wrap::SingletonType<WrappedT>) { return cxx_wrap::SingletonType<ScalarT>(); });
-    wrapped.module().method("array_layout", [] (cxx_wrap::SingletonType<WrappedT>) { return cxx_wrap::SingletonType<typename WrappedT::array_layout>(); });
-    wrapped.module().method("rank", [] (cxx_wrap::SingletonType<WrappedT>) { return int_t(WrappedT::rank); });
+    wrapped.module().method("value_type", [] (jlcxx::SingletonType<WrappedT>) { return jlcxx::SingletonType<ScalarT>(); });
+    wrapped.module().method("array_layout", [] (jlcxx::SingletonType<WrappedT>) { return jlcxx::SingletonType<typename WrappedT::array_layout>(); });
+    wrapped.module().method("rank", [] (jlcxx::SingletonType<WrappedT>) { return int_t(WrappedT::rank); });
   }
 };
 
-void register_kokkos(cxx_wrap::Module& mod)
+void register_kokkos(jlcxx::Module& mod)
 {
-  using namespace cxx_wrap;
+  using namespace jlcxx;
 #ifdef HAVE_TPETRA_INST_SERIAL
   mod.add_type<Kokkos::Compat::KokkosSerialWrapperNode>("KokkosSerialWrapperNode");
   mod.add_type<Kokkos::Serial>("Serial");
@@ -38,7 +38,7 @@ void register_kokkos(cxx_wrap::Module& mod)
   mod.add_type<Kokkos::OpenMP>("OpenMP");
 #endif
 
-  mod.method("default_node_type", [] () { return cxx_wrap::julia_type<KokkosClassic::DefaultNode::DefaultNodeType>(); });
+  mod.method("default_node_type", [] () { return jlcxx::julia_type<KokkosClassic::DefaultNode::DefaultNodeType>(); });
 
   mod.add_type<Kokkos::LayoutLeft>("LayoutLeft");
   mod.add_type<Kokkos::LayoutRight>("LayoutRight");

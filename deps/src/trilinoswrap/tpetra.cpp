@@ -1,4 +1,4 @@
-#include <cxx_wrap.hpp>
+#include "jlcxx/jlcxx.hpp"
 #include <mpi.h>
 
 #include <Teuchos_DefaultMpiComm.hpp>
@@ -13,7 +13,7 @@
 #include "teuchos.hpp"
 #include "tpetra.hpp"
 
-namespace cxx_wrap
+namespace jlcxx
 {
 
 template<template<typename, typename, typename, bool> class T, typename P1, typename P2, typename P3, bool B>
@@ -41,7 +41,7 @@ struct WrapMap
   {
     typedef typename TypeWrapperT::type WrappedT;
     typedef typename WrappedT::node_type NodeT;
-    wrapped.module().method("Map", [](const Tpetra::global_size_t num_indices, const cxx_wrap::StrictlyTypedNumber<typename WrappedT::global_ordinal_type> index_base, const Teuchos::RCP<const Teuchos::Comm<int>>& comm, cxx_wrap::SingletonType<NodeT>)
+    wrapped.module().method("Map", [](const Tpetra::global_size_t num_indices, const jlcxx::StrictlyTypedNumber<typename WrappedT::global_ordinal_type> index_base, const Teuchos::RCP<const Teuchos::Comm<int>>& comm, jlcxx::SingletonType<NodeT>)
     {
       return Teuchos::rcp(new WrappedT(num_indices, index_base.value, comm));
     });
@@ -54,6 +54,19 @@ struct WrapMap
     wrapped.method("getMaxLocalIndex", &WrappedT::getMaxLocalIndex);
     wrapped.method("getMinGlobalIndex", &WrappedT::getMinGlobalIndex);
     wrapped.method("getMaxGlobalIndex", &WrappedT::getMaxGlobalIndex);
+  }
+};
+
+// Wrap the template type CrsMatrix<>
+struct WrapTpetraOperator
+{
+  template<typename TypeWrapperT>
+  void operator()(TypeWrapperT&& wrapped)
+  {
+    typedef typename TypeWrapperT::type WrappedT;
+
+    wrapped.method("getDomainMap", &WrappedT::getDomainMap);
+    wrapped.method("getRangeMap", &WrappedT::getRangeMap);
   }
 };
 
@@ -103,8 +116,6 @@ struct WrapCrsMatrix
     wrapped.method("insertGlobalValues",
       static_cast<void (WrappedT::*)(const global_ordinal_type, const Teuchos::ArrayView<const global_ordinal_type>&, const Teuchos::ArrayView<const scalar_type>&)>(&WrappedT::insertGlobalValues));
     wrapped.module().method("fillComplete", [](WrappedT& w) { w.fillComplete(); });
-    wrapped.method("getDomainMap", &WrappedT::getDomainMap);
-    wrapped.method("getRangeMap", &WrappedT::getRangeMap);
     wrapped.method("getRowMap", &WrappedT::getRowMap);
     wrapped.method("_apply", &WrappedT::apply); // Default arguments not set, hence the _
     wrapped.module().method("apply", [] (const WrappedT& w, const vector_type& a, vector_type& b) { w.apply(a,b); });
@@ -160,10 +171,10 @@ struct WrapMultiVector
     typedef typename WrappedT::dual_view_type dual_view_type;
     typedef typename dual_view_type::t_host host_view_type;
     typedef typename dual_view_type::t_dev device_view_type;
-    wrapped.module().method("host_view_type", [] (WrappedT& vec) { return cxx_wrap::SingletonType<host_view_type>(); });
-    wrapped.module().method("device_view_type", [] (WrappedT& vec) { return cxx_wrap::SingletonType<device_view_type>(); });
-    wrapped.module().method("getLocalView", [] (cxx_wrap::SingletonType<host_view_type>, WrappedT& vec) {return cxx_wrap::create<host_view_type>(vec.template getLocalView<host_view_type>()); } ).set_return_type(cxx_wrap::julia_type<host_view_type>());
-    wrapped.module().method("getLocalView", [] (cxx_wrap::SingletonType<device_view_type>, WrappedT& vec) {return cxx_wrap::create<device_view_type>(vec.template getLocalView<device_view_type>()); } ).set_return_type(cxx_wrap::julia_type<device_view_type>());
+    wrapped.module().method("host_view_type", [] (WrappedT& vec) { return jlcxx::SingletonType<host_view_type>(); });
+    wrapped.module().method("device_view_type", [] (WrappedT& vec) { return jlcxx::SingletonType<device_view_type>(); });
+    wrapped.module().method("getLocalView", [] (jlcxx::SingletonType<host_view_type>, WrappedT& vec) {return jlcxx::create<host_view_type>(vec.template getLocalView<host_view_type>()); } ).set_return_type(jlcxx::julia_type<host_view_type>());
+    wrapped.module().method("getLocalView", [] (jlcxx::SingletonType<device_view_type>, WrappedT& vec) {return jlcxx::create<device_view_type>(vec.template getLocalView<device_view_type>()); } ).set_return_type(jlcxx::julia_type<device_view_type>());
   }
 };
 
@@ -208,9 +219,9 @@ struct ApplyTpetra4
   template<typename... Types> using apply = T<Types...>;
 };
 
-void register_tpetra(cxx_wrap::Module& mod)
+void register_tpetra(jlcxx::Module& mod)
 {
-  using namespace cxx_wrap;
+  using namespace jlcxx;
 
   mod.method("version", Tpetra::version);
 
@@ -225,7 +236,7 @@ void register_tpetra(cxx_wrap::Module& mod)
     .apply_combination<ApplyTpetra3<Tpetra::CrsGraph>, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapCrsGraph());
 
   auto operator_type = mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("Operator");
-  operator_type.apply_combination<Tpetra::Operator, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapTpetraNoOp());
+  operator_type.apply_combination<Tpetra::Operator, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapTpetraOperator());
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("CrsMatrix", operator_type.dt())
     .apply_combination<ApplyTpetra4<Tpetra::CrsMatrix>, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapCrsMatrix());

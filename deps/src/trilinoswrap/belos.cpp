@@ -1,14 +1,14 @@
-#include <cxx_wrap.hpp>
+#include "jlcxx/jlcxx.hpp"
 #include <mpi.h>
 
 #include <BelosTpetraAdapter.hpp>
 #include <BelosSolverFactory.hpp>
 
+#include "ifpack2.hpp"
 #include "kokkos.hpp"
 #include "teuchos.hpp"
-#include "tpetra.hpp"
 
-namespace cxx_wrap
+namespace jlcxx
 {
   // Disable default construction to force creation in RCP
   template<typename ST, typename MV, typename OP> struct DefaultConstructible<Belos::LinearProblem<ST,MV,OP>> : std::false_type {};
@@ -35,25 +35,26 @@ struct WrapLinearProblem
   template<typename TypeWrapperT>
   void operator()(TypeWrapperT&& wrapped)
   {
-    using cxx_wrap::SingletonType;
     typedef typename TypeWrapperT::type WrappedT;
     typedef typename BelosTraits<WrappedT>::operator_type OP;
     wrapped.module().method("LinearProblem", [] (const Teuchos::RCP<const OP>& op) { return Teuchos::rcp(new WrappedT(op, Teuchos::null, Teuchos::null)); });
     wrapped.method("setOperator", &WrappedT::setOperator);
+    wrapped.method("getOperator", &WrappedT::getOperator);
     wrapped.method("setLeftPrec", &WrappedT::setLeftPrec);
     wrapped.method("setRightPrec", &WrappedT::setRightPrec);
     wrapped.method("setProblem", &WrappedT::setProblem);
+    wrapped.method("setLHS", &WrappedT::setLHS);
+    wrapped.method("setRHS", &WrappedT::setRHS);
   }
 };
-
 
 struct WrapSolverManager
 {
   template<typename TypeWrapperT>
   void operator()(TypeWrapperT&& wrapped)
   {
-    using cxx_wrap::SingletonType;
     typedef typename TypeWrapperT::type WrappedT;
+    wrapped.method("getProblem", &WrappedT::getProblem);
     wrapped.method("setProblem", &WrappedT::setProblem);
     wrapped.method("solve", &WrappedT::solve);
   }
@@ -64,7 +65,6 @@ struct WrapSolverFactory
   template<typename TypeWrapperT>
   void operator()(TypeWrapperT&& wrapped)
   {
-    using cxx_wrap::SingletonType;
     typedef typename TypeWrapperT::type WrappedT;
     wrapped.method("create", &WrappedT::create);
   }
@@ -88,9 +88,9 @@ struct ApplySolverFactory
   using apply = Belos::SolverFactory<ST, Tpetra::MultiVector<ST,LT,GT,NT>, Tpetra::Operator<ST,LT,GT,NT>>;
 };
 
-void register_belos(cxx_wrap::Module& mod)
+void register_belos(jlcxx::Module& mod)
 {
-  using namespace cxx_wrap;
+  using namespace jlcxx;
 
   mod.add_bits<Belos::ReturnType>("ReturnType");
   mod.set_const("Converged", Belos::Converged);

@@ -1,4 +1,4 @@
-#include <cxx_wrap.hpp>
+#include "jlcxx/jlcxx.hpp"
 #include <mpi.h>
 
 #include <Teuchos_DefaultMpiComm.hpp>
@@ -12,9 +12,9 @@
 namespace trilinoswrap
 {
 
-void register_benchmark(cxx_wrap::Module& mod)
+void register_benchmark(jlcxx::Module& mod)
 {
-  using namespace cxx_wrap;
+  using namespace jlcxx;
 
   mod.method("vector_fill", [] (const Teuchos::RCP<Tpetra::Map<int, int64_t>>& map, const Teuchos::RCP<Tpetra::Vector<double,int,int64_t>>& v)
   {
