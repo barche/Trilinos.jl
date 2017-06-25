@@ -2,10 +2,9 @@ module Teuchos
 using CxxWrap, MPI
 using Compat
 import .._l_trilinos_wrap
+import Base.get
 
 export ParameterList
-
-import Base.get
 
 @compat abstract type PLAssociative <: CxxWrap.CppAssociative{String, Any} end
 
@@ -26,6 +25,8 @@ CxxWrap.argument_overloads{T}(t::Type{ArrayView{T}}) = [AbstractArray{T,1}]
 wrap_module_functions(registry)
 
 const ParUnion = Union{CxxWrap.SmartPointer{ParameterList}, ParameterList}
+
+get(::Type{Void}, ::ParUnion, ::String) = "nullptr"
 
 # High-level interface for ParameterList
 Base.length(pl::ParUnion) = numParams(pl)
@@ -50,7 +51,7 @@ get(pl::ParUnion, key, default_value) = isParameter(pl, key) ? pl[key] : default
 A pair of ParameterLists, one for input and one for storing the actually used parameters and any added default values
 """
 immutable ParameterListPair
-  input::CxxWrap.SmartPointer{ParameterList}
+  input
   output::ParUnion
 end
 

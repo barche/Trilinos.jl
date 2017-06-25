@@ -14,6 +14,7 @@ namespace jlcxx
   template<typename ST, typename MV, typename OP> struct DefaultConstructible<Belos::LinearProblem<ST,MV,OP>> : std::false_type {};
 
   template<> struct IsBits<Belos::ReturnType> : std::true_type {};
+  template<> struct IsBits<Belos::MsgType> : std::true_type {};
 }
 
 namespace trilinoswrap
@@ -57,6 +58,8 @@ struct WrapSolverManager
     wrapped.method("getProblem", &WrappedT::getProblem);
     wrapped.method("setProblem", &WrappedT::setProblem);
     wrapped.method("solve", &WrappedT::solve);
+    wrapped.method("getValidParameters", &WrappedT::getValidParameters);
+    wrapped.method("getCurrentParameters", &WrappedT::getCurrentParameters);
   }
 };
 
@@ -95,6 +98,16 @@ void register_belos(jlcxx::Module& mod)
   mod.add_bits<Belos::ReturnType>("ReturnType");
   mod.set_const("Converged", Belos::Converged);
   mod.set_const("Unconverged", Belos::Unconverged);
+
+  mod.add_bits<Belos::MsgType>("MsgType");
+  mod.set_const("Errors", Belos::Errors);
+  mod.set_const("Warnings", Belos::Warnings);
+  mod.set_const("IterationDetails", Belos::IterationDetails);
+  mod.set_const("OrthoDetails", Belos::OrthoDetails);
+  mod.set_const("FinalSummary", Belos::FinalSummary);
+  mod.set_const("TimingDetails", Belos::TimingDetails);
+  mod.set_const("StatusTestDetails", Belos::StatusTestDetails);
+  mod.set_const("Debug", Belos::Debug);
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("LinearProblem")
     .apply_combination<ApplyLinearProblem, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapLinearProblem());
