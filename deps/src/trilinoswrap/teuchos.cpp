@@ -1,6 +1,7 @@
 #include "jlcxx/jlcxx.hpp"
 #include <mpi.h>
 
+#include <Teuchos_Array.hpp>
 #include <Teuchos_BLAS_types.hpp>
 #include <Teuchos_DefaultMpiComm.hpp>
 #include <Teuchos_ParameterList.hpp>
@@ -14,7 +15,7 @@ namespace jlcxx
   template<> struct static_type_mapping<MPI_Comm>
   {
     typedef MPI_Comm type;
-    static jl_datatype_t* julia_type() { return ::jlcxx::julia_type("CComm", "MPI"); }
+    static jl_datatype_t* julia_type() { return (jl_datatype_t*)::jlcxx::julia_type("CComm", "MPI"); }
     template<typename T> using remove_const_ref = jlcxx::remove_const_ref<T>;
   };
 
@@ -89,6 +90,22 @@ jl_datatype_t* get_type(Teuchos::ParameterList& pl, const std::string& pname)
   return get_type<TypesT...>(pl, pname);
 }
 
+struct WrapArray
+{
+  template<typename TypeWrapperT>
+  void operator()(TypeWrapperT&& wrapped)
+  {
+    using WrappedT = typename TypeWrapperT::type;
+    using SizeT = typename WrappedT::size_type;
+    using ConstRefT = typename WrappedT::const_reference;
+    using ValT = typename WrappedT::value_type;
+    wrapped.method("size", &WrappedT::size);
+    wrapped.method("at", static_cast<ConstRefT (WrappedT::*)(SizeT) const>(&WrappedT::at));
+    wrapped.method("setindex!", [] (WrappedT& w, const ValT& v, const int_t i) { w[i-1] = v; });
+    wrapped.template constructor<const SizeT, const ValT&>();
+  }
+};
+
 void register_teuchos(jlcxx::Module& mod)
 {
   using namespace jlcxx;
@@ -104,12 +121,12 @@ void register_teuchos(jlcxx::Module& mod)
     return teuchos_comm;
   });
 
-  mod.add_bits<Teuchos::ETransp>("ETransp");
+  mod.add_bits<Teuchos::ETransp>("ETransp", jlcxx::julia_type("CppEnum"));
   mod.set_const("NO_TRANS", Teuchos::NO_TRANS);
   mod.set_const("TRANS", Teuchos::TRANS);
   mod.set_const("CONJ_TRANS", Teuchos::CONJ_TRANS);
 
-  mod.add_bits<Teuchos::EVerbosityLevel>("EVerbosityLevel");
+  mod.add_bits<Teuchos::EVerbosityLevel>("EVerbosityLevel", jlcxx::julia_type("CppEnum"));
   mod.set_const("VERB_DEFAULT", Teuchos::VERB_DEFAULT);
   mod.set_const("VERB_NONE", Teuchos::VERB_NONE);
   mod.set_const("VERB_LOW", Teuchos::VERB_LOW);
@@ -144,6 +161,9 @@ void register_teuchos(jlcxx::Module& mod)
     JL_GC_POP();
     return (jl_value_t*)keys.wrapped();
   });
+
+  mod.add_type<Parametric<TypeVar<1>>>("Array", jlcxx::julia_type("AbstractVector"))
+    .apply<Teuchos::Array<std::string>>(WrapArray());
 }
 
 } // namespace trilinoswrap

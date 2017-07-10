@@ -1,94 +1,157 @@
 using BenchmarkTools
 using MPI
 using Trilinos
+using Base.Test
 
 MPI.Init()
 
+#Kokkos.initialize(Kokkos.OpenMP(), 4)
+
 comm = Teuchos.MpiComm(MPI.CComm(MPI.COMM_WORLD))
+
+my_rank = Teuchos.getRank(comm)
+if my_rank != 0
+  redirect_stdout(open("/dev/null", "w"))
+  redirect_stderr(open("/dev/null", "w"))
+end
 
 function indefinite(n)
   # Generate an indefinite "hard" matrix
   srand(1)
-  A = 4 * speye(n) + sprand(n, n, 60.0 / n)
+  A = 20 * speye(n) + sprand(n, n, 20.0 / n)
   A = (A + A') / 2
   x = ones(n)
   b = A * x
 
-  return A, b
+  return A, b, ones(n)
 end
 
-# function posdef(n)
-#   A, b = indefinite(n)
-#   # Shift the spectrum a bit to make A positive definite
-#   A += 2.35 * speye(n)
 
-#   return A, b
-# end
+# The following Laplace 2D implementation is based on:
+# https://github.com/lruthotto/KrylovMethods.jl/blob/master/benchmarks/benchmark2DLaplacian.ipynb
 
-function posdef(n)
-    A = spdiagm([fill(-1.0,n-1), fill(2.01, n), fill(-1.0, n-1)], (-1,0,1))
-    b = A * ones(n)
-    return A, b
+"""
+ibc,iin = getBoundaryIndices(n::Int)
+
+returns indices of boundary and interior nodes of regular mesh with n^2 cells.
+"""
+function getBoundaryIndices(n::Int)
+    ids = reshape(collect(1:(n+1)^2),n+1,n+1)
+    iin = vec(ids[2:end-1,2:end-1])
+    ibc = setdiff(vec(ids),vec(iin))
+    return ibc,iin
+end
+
+"""
+L,Lin,Lib = getLaplacian(n::Int)
+
+returns discrete Laplacian, interior part, and boundary part, on regular mesh with n^2 cells.
+"""
+function getLaplacian(n::Int)
+    h  = 1/n
+    dx = spdiagm((-ones(n,1),ones(n,1)),0:1,n,n+1)/h
+    d2x = dx'*dx
+    L  = kron(speye(n+1),d2x) + kron(d2x,speye(n+1))
+    
+    # split into boundary and interior part
+    ibc,iin = getBoundaryIndices(n)
+    Lin = L[iin,iin]
+    Lib = L[iin,ibc]
+    return L,Lin,Lib
+end
+"""
+g = getBoundaryConditions(n::Int,fctn=(x,y)->5.*y*sin(pi*x))
+
+discretizes function on regular grid with n^2 cells and returns boundary and interior values as well as the source term value
+"""
+function getBoundaryConditions(n::Int,dirichlet = (x,y) -> (1-x^2)*(1-y^2), sourceterm = (x, y) -> 2*((1-x^2)+(1-y^2)))
+    x  = linspace(0,1,n+1)
+    g = map(Float64,[dirichlet(x1,x2) for x1 in x, x2 in x]')
+    s = map(Float64,[sourceterm(x1,x2) for x1 in x, x2 in x]')
+    ibc,iin = getBoundaryIndices(n)
+    return vec(g)[ibc], vec(g)[iin], vec(s)[iin]
+end
+
+function laplace2d(n=1000)
+  L,Lin,Lib = getLaplacian(n)
+  ubc,refsol,f      = getBoundaryConditions(n)
+  return Lin,vec(-Lib*ubc)+f,refsol
 end
 
 function tpetra_system(S)
-  A,b = S
+  A,b,x = S
   n = length(b)
-  rowmap = Tpetra.Map(n, 0, comm)
+  rowmap = Tpetra.Map(n, 0, comm) #, Kokkos.KokkosOpenMPWrapperNode)
   At = Tpetra.CrsMatrix(A,rowmap)
-  bt = Tpetra.Vector(Tpetra.getRangeMap(At))
+
+  rmap = Tpetra.getRangeMap(At)
+  bt = Tpetra.Vector(rmap)
+  xt = Tpetra.Vector(rmap)
+
+  num_my_elements = Tpetra.getNodeNumElements(rowmap)
 
   bv = Tpetra.device_view(bt)
-  for i in linearindices(b)
-    bv[i-1] = b[i]
+  xv = Tpetra.device_view(xt)
+  for local_row = 0:num_my_elements-1
+    global_row = Tpetra.getGlobalElement(rmap, local_row)
+    bv[local_row] = b[global_row+1]
+    xv[local_row] = x[global_row+1]
   end
 
-  return At, bt
+  return At, bt, xt
 end
 
-function gmres(; n = 10000, tol = 1e-5, restart::Int = 15, maxiter::Int = 1500)
-  A, b = tpetra_system(indefinite(n))
-  outer = div(maxiter, restart)
+"""
+Builds a Belos / Tpetra linear system, solving it once and checking the result against the reference solution
+"""
+function build_checked_system(f, solver_name, prec_type, n, tol, restart::Int, maxiter::Int)
+  A, b, refsol = tpetra_system(f(n))
 
   println("Tolerance = ", tol, "; restart = ", restart, "; max #iterations = ", maxiter)
 
-  params = Trilinos.default_parameters()
-  solver_params = params["Linear Solver Types"]["Belos"]["Solver Types"]["Block GMRES"]
+  params = Trilinos.default_parameters(solver_name, ifpack_prec="CHEBYSHEV")
+  solver_params = params["Linear Solver Types"]["Belos"]["Solver Types"][solver_name]
   solver_params["Convergence Tolerance"] = tol
-  solver_params["Verbosity"] = reinterpret(Int32,Belos.StatusTestDetails)#reinterpret(Int32,Belos.FinalSummary) + reinterpret(Int32,Belos.TimingDetails)
+  solver_params["Verbosity"] = Belos.StatusTestDetails + Belos.FinalSummary + Belos.TimingDetails
   solver_params["Maximum Restarts"] = Int32(restart)
   solver_params["Block Size"] = Int32(maxiter)
   solver_params["Maximum Iterations"] = Int32(maxiter)
+  params["Preconditioner Type"] = prec_type
+  cheb_params = params["Preconditioner Types"]["Ifpack2"]["CHEBYSHEV"]
+  cheb_params["chebyshev: degree"] = Int32(8)
+  #cheb_params["chebyshev: max eigenvalue"] = 100.0
+  cheb_params["chebyshev: ratio eigenvalue"] = 500.0
   
   solver = TpetraSolver(A, params)
 
-  return @benchmark $solver \ $b
+  sol = solver \ b
+  v = Tpetra.device_view(sol)
+  refv = Tpetra.device_view(refsol)
+  maxerr = 0
+  for i in linearindices(v)
+    maxerr = max(abs(v[i] - refv[i]), maxerr)
+  end
+  @test maxerr < 100*tol
+
+  return solver, b
 end
 
-function cg(; n = 10000, tol = 1e-10, maxiter::Int = 1500)
-  A, b = tpetra_system(posdef(n))
-  @show typeof(A)
+sol_ndef(solver_name; n = 500000, tol = 1e-5, restart::Int = 15, maxiter::Int = 1500) = build_checked_system(indefinite, solver_name, "None", n, tol, restart, maxiter)
 
-  println("Tolerance = ", tol, "; max #iterations = ", maxiter)
+"""
+Note: n is not the size of the matrix, but n in an n × n grid!
+"""
+sol_posdef(solver_name; n = 1000, tol = 1e-10, maxiter::Int = 1500) = build_checked_system(laplace2d, solver_name, "Ifpack2", n, tol, 0, maxiter)
 
-  params = Trilinos.default_parameters()
-  solver_params = Teuchos.ParameterList()
-  params["Linear Solver Types"]["Belos"]["Solver Type"] = "Block CG"
-  solver_params["Convergence Tolerance"] = tol
-  solver_params["Verbosity"] = reinterpret(Int32,Belos.StatusTestDetails)#reinterpret(Int32,Belos.FinalSummary) + reinterpret(Int32,Belos.TimingDetails)
-  solver_params["Block Size"] = Int32(maxiter)
-  solver_params["Maximum Iterations"] = Int32(maxiter)
-  params["Linear Solver Types"]["Belos"]["Solver Types"]["Block CG"] = solver_params
+suite = BenchmarkGroup()
 
-  solver = TpetraSolver(A, params)
+suite["GMRES"] = @benchmarkable x=A\b setup=((A,b) = sol_ndef("GMRES"))
+suite["BICGSTAB"] = @benchmarkable x=A\b setup=((A,b) = sol_ndef("BICGSTAB"))
+suite["CG"] = @benchmarkable A\b setup=((A,b) = sol_posdef("CG",n=300))
 
-  return @benchmark $solver \ $b
+result = run(suite)
+if(my_rank == 0)
+  display(result)
 end
-
-gmres_t = gmres()
-cg_t = cg(n=1_000_000, tol = 1e-6)
-
-println("GMRES: $gmres_t")
-println("CG: $cg_t")
 
 MPI.Finalize()

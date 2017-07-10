@@ -212,24 +212,26 @@ function laplace2d(comm, g::CartesianGrid)
   @test Tpetra.isLocallyIndexed(A)
 
   # This prints the matrix if uncommented
-  # Tpetra.describe(A, Teuchos.VERB_EXTREME)
+  Tpetra.describe(A, Teuchos.VERB_EXTREME)
 
-  pl = Teuchos.ParameterList()
-  pl["Solver Type"] = "Block GMRES"
-  solver_types = Teuchos.sublist(pl, "Solver Types")
-  solver_pl = Teuchos.sublist(solver_types, "Block GMRES")
-  solver_pl["Convergence Tolerance"] = 1e-12
-  solver_pl["Maximum Iterations"] = Int32(1000)
-  solver_pl["Num Blocks"] = Int32(1000)
+  params = Trilinos.default_parameters()
+  maxiter = 1000
+  solver_params = params["Linear Solver Types"]["Belos"]["Solver Types"]["Block GMRES"]
+  solver_params["Convergence Tolerance"] = 1e-12
+  solver_params["Verbosity"] = Belos.StatusTestDetails + Belos.FinalSummary + Belos.TimingDetails
+  solver_params["Num Blocks"] = Int32(maxiter)
+  solver_params["Maximum Iterations"] = Int32(maxiter)
 
-  lows = Thyra.LinearOpWithSolve(A, pl, Teuchos.VERB_DEFAULT)
+  #params["Preconditioner Type"] = "None"
+  
+  solver = TpetraSolver(A, params)
 
-  return (lows,b)
+  return (solver,b)
 end
 
 function solve_laplace2d(comm)
 
-  grid = CartesianGrid(101,41,1/50)
+  grid = CartesianGrid(11,11,1/5)
 
   (lows,b) = laplace2d(comm, grid)
   (lows,b) = laplace2d(comm, grid)

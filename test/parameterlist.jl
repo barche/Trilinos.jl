@@ -55,5 +55,8 @@ pl_copy["child"]["param1"] = "copy_modified"
 @test pl["child"]["param1"] == "test2"
 @test pl_copy["child"]["param1"] == "copy_modified"
 
+pl["enum"] = Teuchos.VERB_DEFAULT
+@test pl["enum"] == -1
+
 display(pl[])
 println()

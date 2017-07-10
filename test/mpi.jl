@@ -2,7 +2,7 @@ using Trilinos
 using Base.Test
 using MPI
 
-if !MPI.Initialized()
+if Base.Test.get_testset_depth() == 0
   MPI.Init()
 end
 
@@ -12,6 +12,6 @@ comm = Teuchos.MpiComm(ccomm)
 @test Teuchos.getRank(comm) == MPI.Comm_rank(MPI.COMM_WORLD)
 @test Teuchos.getSize(comm) == MPI.Comm_size(MPI.COMM_WORLD)
 
-if !isdefined(:intesting)
+if Base.Test.get_testset_depth() == 0
   MPI.Finalize()
 end

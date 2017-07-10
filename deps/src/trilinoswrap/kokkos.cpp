@@ -36,9 +36,10 @@ void register_kokkos(jlcxx::Module& mod)
 #ifdef HAVE_TPETRA_INST_OPENMP
   mod.add_type<Kokkos::Compat::KokkosOpenMPWrapperNode>("KokkosOpenMPWrapperNode");
   mod.add_type<Kokkos::OpenMP>("OpenMP");
+  mod.method("initialize", [](Kokkos::OpenMP, int num_threads) { Kokkos::OpenMP::initialize(num_threads); });
 #endif
 
-  mod.method("default_node_type", [] () { return jlcxx::julia_type<KokkosClassic::DefaultNode::DefaultNodeType>(); });
+  mod.method("default_node_type", [] () { return (jl_datatype_t*)jlcxx::julia_type<KokkosClassic::DefaultNode::DefaultNodeType>(); });
 
   mod.add_type<Kokkos::LayoutLeft>("LayoutLeft");
   mod.add_type<Kokkos::LayoutRight>("LayoutRight");

@@ -7,11 +7,7 @@ import ..Tpetra
 
 export LinearOpWithSolve
 
-registry = load_modules(_l_trilinos_wrap)
-
-wrap_module_types(registry)
-
-wrap_module_functions(registry)
+wrap_module(_l_trilinos_wrap, Thyra)
 
 @compat immutable LinearOpWithSolve{ST,LT,GT,NT}
   lows::CxxWrap.SmartPointer{Thyra.LinearOpWithSolveBase{ST}}

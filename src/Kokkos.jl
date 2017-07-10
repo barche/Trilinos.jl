@@ -7,8 +7,7 @@ module Kokkos
   using CustomUnitRanges: filename_for_zerorange
   include(filename_for_zerorange)
 
-  registry = load_modules(_l_trilinos_wrap)
-  wrap_module(registry)
+  wrap_module(_l_trilinos_wrap, Kokkos)
 
   """
   Expose a view using its raw data pointer

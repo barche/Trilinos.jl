@@ -6,11 +6,7 @@ import ..CxxUnion
 import ..Teuchos
 import ..Kokkos
 
-registry = load_modules(_l_trilinos_wrap)
-
-wrap_module_types(registry)
-
-wrap_module_functions(registry)
+wrap_module(_l_trilinos_wrap, Tpetra)
 
 Base.dot{ST,LT,GT,NT}(a::CxxUnion{Tpetra.Vector{ST,LT,GT,NT}}, b::CxxUnion{Tpetra.Vector{ST,LT,GT,NT}}) = Tpetra.dot(a,b)
 

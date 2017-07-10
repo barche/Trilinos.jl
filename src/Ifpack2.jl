@@ -4,6 +4,5 @@ module Ifpack2
   import ..Teuchos
   import ..Tpetra
 
-  registry = load_modules(_l_trilinos_wrap)
-  wrap_module(registry)
+  wrap_module(_l_trilinos_wrap, Ifpack2)
 end

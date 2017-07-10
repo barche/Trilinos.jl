@@ -9,7 +9,6 @@
 #include <Tpetra_Vector.hpp>
 #include <Tpetra_Version.hpp>
 
-#include "kokkos.hpp"
 #include "teuchos.hpp"
 #include "tpetra.hpp"
 
@@ -141,7 +140,7 @@ struct WrapCrsMatrix
     {
       return Teuchos::rcp(new WrappedT(graph));
     });
-    wrapped.module().method("describe", [](const WrappedT& mat, const Teuchos::EVerbosityLevel verbLevel) { mat.describe(*Teuchos::VerboseObjectBase::getDefaultOStream(), verbLevel); });
+    wrapped.module().method("describe", [](const WrappedT& mat, const Teuchos::EVerbosityLevel verbLevel) { mat.describe(*Teuchos::VerboseObjectBase::getDefaultOStream(), verbLevel); Teuchos::VerboseObjectBase::getDefaultOStream()->flush(); });
   }
 };
 
@@ -219,13 +218,20 @@ struct ApplyTpetra4
   template<typename... Types> using apply = T<Types...>;
 };
 
+jl_datatype_t* g_tpetra_operator_type;
+
+jl_datatype_t* tpetra_operator_type()
+{
+  return g_tpetra_operator_type;
+}
+
 void register_tpetra(jlcxx::Module& mod)
 {
   using namespace jlcxx;
 
   mod.method("version", Tpetra::version);
 
-  mod.add_bits<Tpetra::ProfileType>("ProfileType");
+  mod.add_bits<Tpetra::ProfileType>("ProfileType", jlcxx::julia_type("CppEnum"));
   mod.set_const("StaticProfile", Tpetra::StaticProfile);
   mod.set_const("DynamicProfile", Tpetra::DynamicProfile);
 
@@ -237,8 +243,12 @@ void register_tpetra(jlcxx::Module& mod)
 
   auto operator_type = mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("Operator");
   operator_type.apply_combination<Tpetra::Operator, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapTpetraOperator());
+  g_tpetra_operator_type = operator_type.dt();
 
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("CrsMatrix", operator_type.dt())
+  auto rowmat_type = mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("RowMatrix", operator_type.dt());
+  rowmat_type.apply_combination<Tpetra::RowMatrix, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapTpetraNoOp());
+
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("CrsMatrix", rowmat_type.dt())
     .apply_combination<ApplyTpetra4<Tpetra::CrsMatrix>, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapCrsMatrix());
 
   auto multivector = mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("MultiVector");

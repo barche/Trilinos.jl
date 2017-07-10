@@ -143,7 +143,7 @@ void register_thyra(jlcxx::Module& mod)
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>, ParameterList<TypeVar<1>>>("TpetraLinearOp", linop_base.dt())
     .apply_combination<Thyra::TpetraLinearOp, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapTpetraLinOp());
 
-  mod.add_bits<Thyra::EOpTransp>("EOpTransp");
+  mod.add_bits<Thyra::EOpTransp>("EOpTransp", jlcxx::julia_type("CppEnum"));
   mod.set_const("NOTRANS", Thyra::NOTRANS);
   mod.set_const("CONJ", Thyra::CONJ);
   mod.set_const("TRANS", Thyra::TRANS);

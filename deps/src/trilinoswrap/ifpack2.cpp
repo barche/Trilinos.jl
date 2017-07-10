@@ -30,14 +30,30 @@ struct WrapPreconditioner
   }
 };
 
+struct WrapFactory
+{
+  WrapFactory(jlcxx::Module& mod) : m_module(mod)
+  {
+  }
+
+  template<typename MatrixType>
+  void operator()()
+  {
+    m_module.method("create", [] (Ifpack2::Factory, const std::string& precType, const Teuchos::RCP<const MatrixType>& matrix) { return Ifpack2::Factory::create(precType, matrix); } );
+  }
+
+  jlcxx::Module& m_module;
+};
+
 void register_ifpack2(jlcxx::Module& mod)
 {
   using namespace jlcxx;
 
-  mod.add_type<Ifpack2::Factory>("Factory");
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("Preconditioner", tpetra_operator_type())
+    .apply_combination<Ifpack2::Preconditioner, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapPreconditioner());
 
-  // mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("Preconditioner", jlcxx::julia_type("Operator", "Tpetra"))
-  //   .apply_combination<Ifpack2::Preconditioner, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapPreconditioner());
+  mod.add_type<Ifpack2::Factory>("Factory");
+  jlcxx::for_each_type<RowMatrixTypes>(WrapFactory(mod));
 }
 
 } // namespace trilinoswrap

@@ -70,6 +70,7 @@ struct WrapSolverFactory
   {
     typedef typename TypeWrapperT::type WrappedT;
     wrapped.method("create", &WrappedT::create);
+    wrapped.method("supportedSolverNames", &WrappedT::supportedSolverNames);
   }
 };
 
@@ -95,11 +96,11 @@ void register_belos(jlcxx::Module& mod)
 {
   using namespace jlcxx;
 
-  mod.add_bits<Belos::ReturnType>("ReturnType");
+  mod.add_bits<Belos::ReturnType>("ReturnType", jlcxx::julia_type("CppEnum"));
   mod.set_const("Converged", Belos::Converged);
   mod.set_const("Unconverged", Belos::Unconverged);
 
-  mod.add_bits<Belos::MsgType>("MsgType");
+  mod.add_bits<Belos::MsgType>("MsgType", jlcxx::julia_type("CppEnum"));
   mod.set_const("Errors", Belos::Errors);
   mod.set_const("Warnings", Belos::Warnings);
   mod.set_const("IterationDetails", Belos::IterationDetails);

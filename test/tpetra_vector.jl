@@ -2,7 +2,7 @@ using Trilinos
 using Base.Test
 using MPI
 
-if !MPI.Initialized()
+if Base.Test.get_testset_depth() == 0
   MPI.Init()
 end
 
@@ -162,6 +162,6 @@ println("C++ timings, MultiVector:")
 @test benchmvview[0,0] == 0
 @test benchmvview[v_end,mv_cols-1] == (n_my_elms-1)*mv_cols
 
-if !isdefined(:intesting)
+if Base.Test.get_testset_depth() == 0
   MPI.Finalize()
 end

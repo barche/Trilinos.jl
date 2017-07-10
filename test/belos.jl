@@ -2,7 +2,7 @@ using Trilinos
 using Base.Test
 using MPI
 
-if !MPI.Initialized()
+if Base.Test.get_testset_depth() == 0
   MPI.Init()
 end
 
@@ -16,21 +16,25 @@ b = Tpetra.Vector(Tpetra.getRangeMap(A))
 Tpetra.randomize(x)
 Tpetra.randomize(b)
 
-@show const OpT = supertype(supertype(typeof(A[])))
+@show const OpT = supertype(supertype(supertype(typeof(A[]))))
 @show const MVT = supertype(supertype(typeof(b[])))
 
 solver_factory = Belos.SolverFactory{Float64, MVT, OpT}()
-solver = Belos.create(solver_factory, "GMRES", Teuchos.ParameterList())
+
+solparams = Teuchos.ParameterList()
+solparams["Verbosity"] = Belos.StatusTestDetails + Belos.FinalSummary + Belos.TimingDetails
+solver = Belos.create(solver_factory, "Block GMRES", solparams)
 linprob = Belos.LinearProblem(A)
 
-# prec_factory = Ifpack2.Factory()
-# M = Ifpack2.create(prec_factory, "ILUT", A)
-# prec_params = Teuchos.ParameterList()
-# Ifpack2.setParameters(M, prec_params)
-# Ifpack2.initialize(M)
-# Ifpack2.compute(M)
+prec_factory = Ifpack2.Factory()
+@show M = Ifpack2.create(prec_factory, "ILUT", A)
+prec_params = Teuchos.ParameterList()
+Ifpack2.setParameters(M, prec_params)
+display(prec_params[])
+Ifpack2.initialize(M)
+Ifpack2.compute(M)
 
-# Belos.setRightPrec(linprob, M)
+Belos.setRightPrec(linprob, M)
 Belos.setProblem(linprob,x,b)
 Belos.setProblem(solver, linprob)
 
@@ -39,6 +43,9 @@ for (bi,xi) in zip(Tpetra.device_view(b),Tpetra.device_view(x))
   @test bi ≈ xi
 end
 
-if !isdefined(:intesting)
+println("Supported Belos solvers:")
+foreach(println, Belos.supportedSolverNames(solver_factory))
+
+if Base.Test.get_testset_depth() == 0
   MPI.Finalize()
 end

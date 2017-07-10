@@ -17,7 +17,7 @@ ArrayView{T}(a::AbstractArray{T,1}) = ArrayView(pointer(a),length(a))
 ArrayView{T}(a::AbstractArray{T,1}, length::Integer) = ArrayView(pointer(a),length)
 Base.convert{T}(::Type{ArrayView{T}}, a::AbstractArray{T,1}) = ArrayView(a, length(a))
 
-registry = load_modules(_l_trilinos_wrap)
+registry = load_module(_l_trilinos_wrap, Teuchos)
 wrap_module_types(registry)
 
 CxxWrap.argument_overloads{T}(t::Type{ArrayView{T}}) = [AbstractArray{T,1}]
@@ -40,6 +40,7 @@ function Base.getindex(pl::ParUnion, key)
   return get(get_type(pl, key), pl, key)
 end
 Base.setindex!(pl::ParUnion, v, key) = set(pl, key, v)
+Base.setindex!(pl::ParUnion, v::CppEnum, key) = set(pl, key, convert(Int32,v))
 Base.keys(pl::ParUnion) = keys(pl)
 Base.start(pl::ParUnion) = (start(keys(pl)), keys(pl))
 Base.next(pl::ParUnion, state) = ((state[2][state[1]], pl[state[2][state[1]]]), (state[1]+1,state[2]))
@@ -65,5 +66,12 @@ function get(pl::ParameterListPair, key, default_value)
   pl.output[key] = result
   return result
 end
+
+# Interface to Array
+Teuchos.Array{T}(nelems::Integer, elem::T) = Teuchos.Array{T}(nelems, elem)
+Teuchos.Array{T <: AbstractString}(nelems::Integer, elem::T) = Teuchos.Array{AbstractString}(nelems, elem)
+@compat Base.IndexStyle(::Teuchos.Array) = IndexLinear()
+Base.size(arr::Teuchos.Array) = (size(arr),)
+Base.getindex(arr::Teuchos.Array, i::Integer) = at(arr,i-1)
 
 end

@@ -1,18 +1,15 @@
 using MPI
-
-myname = splitdir(@__FILE__)[end]
-
-intesting = true
+using Base.Test
 
 MPI.Init()
 
-excluded = []
+excluded = ["runtests.jl"]
 
-for fname in readdir()
-  if fname != myname && endswith(fname, ".jl") && fname ∉ excluded
-    println("running test ", fname, "...")
-    include(fname)
+@testset "Trilinos tests" begin
+  @testset "$f" for f in filter(fname -> fname ∉ excluded, readdir())
+    include(f)
   end
+  sleep(1)
 end
 
 MPI.Finalize()

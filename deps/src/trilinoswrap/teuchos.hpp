@@ -55,7 +55,7 @@ struct static_type_mapping<Teuchos::ArrayView<T>>
 {
   typedef typename std::remove_const<T>::type NonConstT;
   typedef trilinoswrap::ArrayViewMirror<T> type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)jlcxx::julia_type("ArrayView", "Teuchos"), jl_svec1(static_type_mapping<NonConstT>::julia_type())); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type(jlcxx::julia_type("ArrayView", "Teuchos"), jl_svec1(static_type_mapping<NonConstT>::julia_type())); }
 };
 
 

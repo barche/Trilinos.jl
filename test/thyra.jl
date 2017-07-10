@@ -2,7 +2,7 @@ using Trilinos
 using Base.Test
 using MPI
 
-if !MPI.Initialized()
+if Base.Test.get_testset_depth() == 0
   MPI.Init()
 end
 
@@ -47,6 +47,6 @@ for (bi,xi) in zip(bv,xv)
   @test bi ≈ xi
 end
 
-if !isdefined(:intesting)
+if Base.Test.get_testset_depth() == 0
   MPI.Finalize()
 end
