@@ -16,7 +16,7 @@ end
 
 @BinDeps.setup
 
-jlcxx_dir = Pkg.dir("CxxWrap","deps","usr","share","cmake")
+jlcxx_dir = joinpath(dirname(CxxWrap._l_jlcxx), "cmake", "JlCxx")
 
 trilinoswrap = library_dependency("trilinoswrap", aliases=["libtrilinoswrap"])
 

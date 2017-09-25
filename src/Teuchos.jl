@@ -40,6 +40,7 @@ function Base.getindex(pl::ParUnion, key)
   return get(get_type(pl, key), pl, key)
 end
 Base.setindex!(pl::ParUnion, v, key) = set(pl, key, v)
+Base.setindex!(pl::ParUnion, v::Int64, key) = set(pl, key, Int32(v))
 Base.setindex!(pl::ParUnion, v::CppEnum, key) = set(pl, key, convert(Int32,v))
 Base.keys(pl::ParUnion) = keys(pl)
 Base.start(pl::ParUnion) = (start(keys(pl)), keys(pl))

@@ -121,6 +121,9 @@ void register_teuchos(jlcxx::Module& mod)
     return teuchos_comm;
   });
 
+  mod.add_bits<Teuchos::ENull>("ENull", jlcxx::julia_type("CppEnum"));
+  mod.set_const("null", Teuchos::null);
+
   mod.add_bits<Teuchos::ETransp>("ETransp", jlcxx::julia_type("CppEnum"));
   mod.set_const("NO_TRANS", Teuchos::NO_TRANS);
   mod.set_const("TRANS", Teuchos::TRANS);

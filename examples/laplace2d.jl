@@ -212,11 +212,11 @@ function laplace2d(comm, g::CartesianGrid)
   @test Tpetra.isLocallyIndexed(A)
 
   # This prints the matrix if uncommented
-  Tpetra.describe(A, Teuchos.VERB_EXTREME)
+  # Tpetra.describe(A, Teuchos.VERB_EXTREME)
 
   params = Trilinos.default_parameters()
   maxiter = 1000
-  solver_params = params["Linear Solver Types"]["Belos"]["Solver Types"]["Block GMRES"]
+  solver_params = params["Linear Solver Types"]["Belos"]["Solver Types"]["BLOCK GMRES"]
   solver_params["Convergence Tolerance"] = 1e-12
   solver_params["Verbosity"] = Belos.StatusTestDetails + Belos.FinalSummary + Belos.TimingDetails
   solver_params["Num Blocks"] = Int32(maxiter)
@@ -231,7 +231,7 @@ end
 
 function solve_laplace2d(comm)
 
-  grid = CartesianGrid(11,11,1/5)
+  grid = CartesianGrid(101,101,1/50)
 
   (lows,b) = laplace2d(comm, grid)
   (lows,b) = laplace2d(comm, grid)
@@ -249,11 +249,13 @@ function solve_laplace2d(comm)
 
   x = linspace(-1.0,1.0,grid.nx)
   y = linspace(-1.0,1.0,grid.ny)*grid.h*(grid.ny-1)/2
-  return (x,y,sol)
+  return (x,y,Tpetra.device_view(sol),grid)
 end
 
 # MPI setup
-MPI.Init()
+if !MPI.Initialized()
+  MPI.Init()
+end
 comm = Teuchos.MpiComm(MPI.CComm(MPI.COMM_WORLD))
 
 my_rank = Teuchos.getRank(comm)
@@ -267,20 +269,11 @@ if USE_LOCAL_INDICES && nb_procs > 1
   error("Local indices may only be used on single core execution")
 end
 
-(x,y,φ) = solve_laplace2d(comm)
+(x,y,f) = solve_laplace2d(comm)
 
 if isinteractive()
-# using Plots
-# sol2d = zeros(grid.ny,grid.nx)
-# for i in 1:length(sol_view)
-#   gid = global_element(sol_map, i-1)
-#   (ix,iy) = xyindices(grid,gid)
-#   sol2d[iy+1,ix+1] = sol_view[i]
-# end
-
-# gr()
-# display(heatmap(x,y,φ,aspect_ratio=1))
-
+  using Plots
+  heatmap(x,y,f,aspect_ratio=1)
+else
+  MPI.Finalize()
 end
-
-MPI.Finalize()

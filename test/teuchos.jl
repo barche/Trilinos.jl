@@ -16,3 +16,5 @@ println(teuchosarray)
 for (i,s) in enumerate(teuchosarray)
   @test teuchosarray[i] == "test$i"
 end
+
+@test convert(Int32,Teuchos.null) == 0

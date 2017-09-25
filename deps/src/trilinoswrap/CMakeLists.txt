@@ -10,7 +10,7 @@ find_package(Trilinos)
 find_package(JlCxx)
 find_package(Eigen3)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ${Trilinos_CXX_COMPILER_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Trilinos_CXX_COMPILER_FLAGS}")
 
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${JlCxx_DIR}/../;${Trilinos_LIBRARY_DIRS}")
 
@@ -22,12 +22,13 @@ add_library(trilinoswrap SHARED
   ifpack2.cpp
   module.cpp
   kokkos.cpp
+  muelu.cpp
   testing.cpp
   teuchos.cpp
   tpetra.cpp
   thyra.cpp
 )
-target_link_libraries(trilinoswrap ${Teuchos_LIBRARIES} ${Tpetra_LIBRARIES} ${Stratimikos_LIBRARIES} ${Thyra_LIBRARIES} ${Ifpack2_LIBRARIES} JlCxx::jlcxx)
+target_link_libraries(trilinoswrap ${Teuchos_LIBRARIES} ${Tpetra_LIBRARIES} ${Stratimikos_LIBRARIES} ${Thyra_LIBRARIES} ${Ifpack2_LIBRARIES} ${MueLu_LIBRARIES} JlCxx::jlcxx)
 
 install(TARGETS
   trilinoswrap

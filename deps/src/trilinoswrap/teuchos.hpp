@@ -23,6 +23,7 @@ namespace jlcxx
 {
 
 template<> struct IsBits<MPI_Comm> : std::true_type {};
+template<> struct IsBits<Teuchos::ENull> : std::true_type {};
 template<> struct IsBits<Teuchos::ETransp> : std::true_type {};
 template<> struct IsBits<Teuchos::EVerbosityLevel> : std::true_type {};
 

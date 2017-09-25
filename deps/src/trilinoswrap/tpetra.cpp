@@ -205,17 +205,17 @@ struct WrapTpetraNoOp
   }
 };
 
-// Allows using apply_combination on a type that has a non-type parameter (bool in this case, with a default  value we never change)
+// Allows using apply_combination on a type that has a non-type parameter (bool in this case, with a default value we never change)
 template<template<typename, typename, typename, bool> class T>
 struct ApplyTpetra3
 {
-  template<typename... Types> using apply = T<Types...>;
+  template<typename T1, typename T2, typename T3> using apply = T<T1, T2, T3, false>;
 };
 
 template<template<typename, typename, typename, typename, bool> class T>
 struct ApplyTpetra4
 {
-  template<typename... Types> using apply = T<Types...>;
+  template<typename T1, typename T2, typename T3, typename T4> using apply = T<T1, T2, T3, T4, false>;
 };
 
 jl_datatype_t* g_tpetra_operator_type;

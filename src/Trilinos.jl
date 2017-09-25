@@ -4,6 +4,7 @@ module Trilinos
 export Belos
 export Ifpack2
 export Kokkos
+export MueLu
 export Teuchos
 export Tpetra
 export Thyra
@@ -32,8 +33,9 @@ include("Teuchos.jl")
 include("Kokkos.jl")
 include("Tpetra.jl")
 include("Belos.jl")
-include("Ifpack2.jl")
 include("Thyra.jl")
+include("Ifpack2.jl")
+include("MueLu.jl")
 include("Benchmark.jl")
 include("Testing.jl")
 

@@ -109,7 +109,7 @@ function build_checked_system(f, solver_name, prec_type, n, tol, restart::Int, m
 
   println("Tolerance = ", tol, "; restart = ", restart, "; max #iterations = ", maxiter)
 
-  params = Trilinos.default_parameters(solver_name, ifpack_prec="CHEBYSHEV")
+  params = Trilinos.default_parameters(solver_name)
   solver_params = params["Linear Solver Types"]["Belos"]["Solver Types"][solver_name]
   solver_params["Convergence Tolerance"] = tol
   solver_params["Verbosity"] = Belos.StatusTestDetails + Belos.FinalSummary + Belos.TimingDetails
@@ -117,10 +117,6 @@ function build_checked_system(f, solver_name, prec_type, n, tol, restart::Int, m
   solver_params["Block Size"] = Int32(maxiter)
   solver_params["Maximum Iterations"] = Int32(maxiter)
   params["Preconditioner Type"] = prec_type
-  cheb_params = params["Preconditioner Types"]["Ifpack2"]["CHEBYSHEV"]
-  cheb_params["chebyshev: degree"] = Int32(8)
-  #cheb_params["chebyshev: max eigenvalue"] = 100.0
-  cheb_params["chebyshev: ratio eigenvalue"] = 500.0
   
   solver = TpetraSolver(A, params)
 

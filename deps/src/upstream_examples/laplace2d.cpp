@@ -340,7 +340,7 @@ struct Laplace2D
       throw std::runtime_error("Local indexing is not supported in parallel runs");
     }
 
-    CartesianGrid grid = {101,41,1.0/50.0};
+    CartesianGrid grid = {101,101,1.0/50.0};
 
     laplace2d(comm, grid);
     Teuchos::TimeMonitor::report(std::cout);

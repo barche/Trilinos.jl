@@ -26,3 +26,13 @@ ENV["TRILINOS_ROOT"] = "/usr"
 Pkg.clone("https://github.com/barche/Trilinos.jl")
 Pkg.build("Trilinos")
 ```
+
+### CUDA
+
+To build with CUDA support on Linux, set the following environment variables before building CxxWrap and Trilinos:
+
+```julia
+ENV["OMPI_CXX"]="nvcc_wrapper"
+ENV["NVCC_WRAPPER_DEFAULT_COMPILER"]="g++-5"
+ENV["CXX"] = "mpicxx"
+```

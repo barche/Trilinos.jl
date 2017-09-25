@@ -52,15 +52,13 @@ function TpetraSolver(A::CxxUnion{Tpetra.CrsMatrix{ST,LT,GT,NT}}, parameterlist 
   error("Unsupported linear solver type: $linear_solver_type")
 end
 
-function default_parameters(solver_type="BLOCK GMRES"; ifpack_prec = "ILUT")
+function default_parameters(solver_type="BLOCK GMRES"; prec_factory = Ifpack2.default_parameters)
   params = Dict("Linear Solver Type" => "Belos", "Linear Solver Types" => Dict("Belos" => Dict("Solver Type" => solver_type, "Solver Types" => Teuchos.ParameterList())))
   params["Preconditioner Type"] = "Ifpack2"
 
   prec_types = Teuchos.ParameterList("Preconditioner Types")
-  ifpack2 = Teuchos.ParameterList("Ifpack2")
-  ifpack2["Preconditioner Type"] = ifpack_prec
-  ifpack2[ifpack_prec] = Teuchos.ParameterList(ifpack_prec)
-  prec_types["Ifpack2"] = ifpack2
+  prec_params = prec_factory()
+  prec_types[Teuchos.name(prec_params)] = prec_params
   params["Preconditioner Types"] = prec_types
 
   stypes = params["Linear Solver Types"]["Belos"]["Solver Types"]

@@ -62,6 +62,13 @@ if my_rank == (Teuchos.getSize(comm)-1)
   dv2[last(indices(dv2,1)),2] = 4
 end
 
+sim_mat = similar(dv2)
+@test typeof(sim_mat) == Array{Float64, 2}
+@test size(sim_mat) == (n,3)
+copy!(sim_mat, dv2)
+println("sim_mat:")
+println(sim_mat)
+
 dots_check = [(n-1)*4.0+9.0, n*4.0, (n-1)*4.0+16.0]
 mv_dots = zeros(mv_cols)
 Tpetra.dot(mv,mv,Teuchos.ArrayView(mv_dots))

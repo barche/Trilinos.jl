@@ -6,6 +6,7 @@ namespace trilinoswrap
 extern void register_belos(jlcxx::Module& mod);
 extern void register_ifpack2(jlcxx::Module& mod);
 extern void register_kokkos(jlcxx::Module& mod);
+extern void register_muelu(jlcxx::Module& mod);
 extern void register_teuchos(jlcxx::Module& mod);
 extern void register_tpetra(jlcxx::Module& mod);
 extern void register_thyra(jlcxx::Module& mod);
@@ -30,6 +31,10 @@ JULIA_CPP_MODULE_BEGIN(registry)
   if(jlcxx::symbol_name(jl_current_module->name) == "Kokkos")
   {
     trilinoswrap::register_kokkos(registry.create_module("Kokkos"));
+  }
+  if(jlcxx::symbol_name(jl_current_module->name) == "MueLu")
+  {
+    trilinoswrap::register_muelu(registry.create_module("MueLu"));
   }
   if(jlcxx::symbol_name(jl_current_module->name) == "Teuchos")
   {
