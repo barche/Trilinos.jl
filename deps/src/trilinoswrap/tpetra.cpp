@@ -1,4 +1,3 @@
-#include "jlcxx/jlcxx.hpp"
 #include <mpi.h>
 
 #include <Teuchos_DefaultMpiComm.hpp>
@@ -11,6 +10,8 @@
 
 #include "teuchos.hpp"
 #include "tpetra.hpp"
+
+#include "jlcxx/jlcxx.hpp"
 
 namespace jlcxx
 {

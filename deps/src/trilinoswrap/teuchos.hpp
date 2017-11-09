@@ -1,13 +1,13 @@
 #ifndef TRILINOS_JL_TEUCHOS_HPP
 #define TRILINOS_JL_TEUCHOS_HPP
 
-#include "jlcxx/array.hpp"
-#include "jlcxx/jlcxx.hpp"
-
 #include <Teuchos_ArrayViewDecl.hpp>
 #include <Teuchos_BLAS_types.hpp>
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_VerbosityLevel.hpp>
+
+#include "jlcxx/array.hpp"
+#include "jlcxx/jlcxx.hpp"
 
 namespace trilinoswrap
 {

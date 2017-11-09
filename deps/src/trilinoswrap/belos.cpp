@@ -1,4 +1,3 @@
-#include "jlcxx/jlcxx.hpp"
 #include <mpi.h>
 
 #include <BelosTpetraAdapter.hpp>
@@ -7,6 +6,8 @@
 #include "ifpack2.hpp"
 #include "kokkos.hpp"
 #include "teuchos.hpp"
+
+#include "jlcxx/jlcxx.hpp"
 
 namespace jlcxx
 {

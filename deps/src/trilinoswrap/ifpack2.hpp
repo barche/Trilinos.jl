@@ -1,11 +1,11 @@
 #ifndef TRILINOS_JL_IFPACK2_HPP
 #define TRILINOS_JL_IFPACK2_HPP
 
-#include "jlcxx/jlcxx.hpp"
-
 #include <Ifpack2_Factory.hpp>
 
 #include "tpetra.hpp"
+
+#include "jlcxx/jlcxx.hpp"
 
 namespace jlcxx
 {

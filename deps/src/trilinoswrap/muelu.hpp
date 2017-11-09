@@ -1,11 +1,11 @@
 #ifndef TRILINOS_JL_IFPACK2_HPP
 #define TRILINOS_JL_IFPACK2_HPP
 
-#include "jlcxx/jlcxx.hpp"
-
 #include <MueLu_TpetraOperator.hpp>
 
 #include "tpetra.hpp"
+
+#include "jlcxx/jlcxx.hpp"
 
 namespace jlcxx
 {

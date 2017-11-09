@@ -1,4 +1,3 @@
-#include "jlcxx/jlcxx.hpp"
 #include <mpi.h>
 
 #include "kokkos.hpp"
@@ -6,6 +5,8 @@
 #include <Kokkos_DefaultNode.hpp>
 #include <Kokkos_View.hpp>
 #include <TpetraCore_config.h>
+
+#include "jlcxx/jlcxx.hpp"
 
 namespace trilinoswrap
 {

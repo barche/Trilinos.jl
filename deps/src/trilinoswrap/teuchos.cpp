@@ -1,4 +1,3 @@
-#include "jlcxx/jlcxx.hpp"
 #include <mpi.h>
 
 #include <Teuchos_Array.hpp>
@@ -8,6 +7,8 @@
 #include <Teuchos_XMLParameterListHelpers.hpp>
 
 #include "teuchos.hpp"
+
+#include "jlcxx/jlcxx.hpp"
 
 namespace jlcxx
 {

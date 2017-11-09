@@ -1,4 +1,3 @@
-#include "jlcxx/jlcxx.hpp"
 #include <mpi.h>
 
 #include "muelu.hpp"
@@ -6,6 +5,8 @@
 #include "teuchos.hpp"
 
 #include <MueLu_CreateTpetraPreconditioner.hpp>
+
+#include "jlcxx/jlcxx.hpp"
 
 namespace trilinoswrap
 {

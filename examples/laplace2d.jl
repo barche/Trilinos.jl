@@ -3,6 +3,10 @@ using Trilinos
 using Base.Test
 using Compat
 
+if isinteractive()
+  using Plots
+end
+
 const USE_LOCAL_INDICES = !isempty(ARGS) && ARGS[1] == "local"
 
 @static if USE_LOCAL_INDICES
@@ -272,8 +276,7 @@ end
 (x,y,f) = solve_laplace2d(comm)
 
 if isinteractive()
-  using Plots
-  heatmap(x,y,f,aspect_ratio=1)
+  plot(x, y, f, aspect_ratio=1, seriestype=:heatmap)
 else
   MPI.Finalize()
 end

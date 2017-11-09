@@ -1,10 +1,10 @@
 #ifndef TRILINOS_JL_KOKKOS_HPP
 #define TRILINOS_JL_KOKKOS_HPP
 
-#include "jlcxx/jlcxx.hpp"
-
 #include <Kokkos_DefaultNode.hpp>
 #include <TpetraCore_config.h>
+
+#include "jlcxx/jlcxx.hpp"
 
 namespace trilinoswrap
 {

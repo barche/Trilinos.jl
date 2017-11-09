@@ -15,16 +15,17 @@ module Kokkos
   immutable PtrView{ScalarT,N,LayoutT} <: AbstractArray{ScalarT,N}
     ptr::Ptr{ScalarT}
     size::NTuple{N,Int}
+    stored_view # prevent GC of the actual view
   end
 
   make_dimensions{N}(v,::Type{Val{N}}) = ([Int(Kokkos.dimension(v,i-1)) for i in 1:N]...)
 
   function view{ST,LayoutT,SpaceT,N}(v::View3{Ptr{Ptr{ST}},LayoutT,SpaceT}, ndims::Type{Val{N}})
-    return PtrView{ST,N,LayoutT}(Kokkos.ptr_on_device(v),make_dimensions(v,ndims))
+    return PtrView{ST,N,LayoutT}(Kokkos.ptr_on_device(v),make_dimensions(v,ndims), v)
   end
 
   function view{ST,LayoutT,SpaceT,N}(v::View4{Ptr{Ptr{ST}},LayoutT,SpaceT,Void}, ndims::Type{Val{N}})
-    return PtrView{ST,N,LayoutT}(Kokkos.ptr_on_device(v),make_dimensions(v,ndims))
+    return PtrView{ST,N,LayoutT}(Kokkos.ptr_on_device(v),make_dimensions(v,ndims), v)
   end
 
   # Array interface, 0-based for consistency with global-to-local index mapping
@@ -38,10 +39,12 @@ module Kokkos
   Base.similar{ScalarT,N,LayoutT}(v::PtrView{ScalarT,N,LayoutT}) = Array{ScalarT,N}(length.(indices(v)))
 
   function Base.copy!(dest::AbstractArray{T,N}, src::PtrView{T,N,LayoutT}) where {T,N,LayoutT}
+    println("copying")
+    @show maximum(src)
     @boundscheck size.(indices(src)) == size.(indices(dest))
     for (I,J) in zip(eachindex(IndexStyle(dest), dest), eachindex(IndexStyle(src), src))
-        @inbounds dest[I] = src[J]
+      @inbounds dest[I] = src[J]
     end
-    dest
+    return dest
   end
 end

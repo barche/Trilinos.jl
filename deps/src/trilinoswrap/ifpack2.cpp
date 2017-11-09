@@ -1,9 +1,10 @@
-#include "jlcxx/jlcxx.hpp"
 #include <mpi.h>
 
 #include "ifpack2.hpp"
 #include "kokkos.hpp"
 #include "teuchos.hpp"
+
+#include "jlcxx/jlcxx.hpp"
 
 namespace trilinoswrap
 {

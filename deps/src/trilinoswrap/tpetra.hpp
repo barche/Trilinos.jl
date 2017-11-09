@@ -1,12 +1,12 @@
 #ifndef TRILINOS_JL_TPETRA_HPP
 #define TRILINOS_JL_TPETRA_HPP
 
-#include "jlcxx/jlcxx.hpp"
-
 #include <Tpetra_CrsMatrix.hpp>
 #include <Tpetra_Vector.hpp>
 
 #include "kokkos.hpp"
+
+#include "jlcxx/jlcxx.hpp"
 
 namespace jlcxx
 {
