@@ -48,12 +48,14 @@ struct WrapMap
     wrapped.method("getNodeNumElements", &WrappedT::getNodeNumElements);
     wrapped.method("getGlobalElement", &WrappedT::getGlobalElement);
     wrapped.method("getLocalElement", &WrappedT::getLocalElement);
-    wrapped.method("isNodeGlobalElement", &WrappedT::isNodeGlobalElement);
     wrapped.method("getIndexBase", &WrappedT::getIndexBase);
     wrapped.method("getMinLocalIndex", &WrappedT::getMinLocalIndex);
     wrapped.method("getMaxLocalIndex", &WrappedT::getMaxLocalIndex);
     wrapped.method("getMinGlobalIndex", &WrappedT::getMinGlobalIndex);
     wrapped.method("getMaxGlobalIndex", &WrappedT::getMaxGlobalIndex);
+    wrapped.method("isNodeGlobalElement", &WrappedT::isNodeGlobalElement);
+    wrapped.method("isContiguous", &WrappedT::isContiguous);
+    wrapped.method("isUniform", &WrappedT::isUniform);
   }
 };
 
@@ -85,6 +87,7 @@ struct WrapCrsGraph
     wrapped.method("getDomainMap", &WrappedT::getDomainMap);
     wrapped.method("getRangeMap", &WrappedT::getRangeMap);
     wrapped.method("getRowMap", &WrappedT::getRowMap);
+    wrapped.method("getColMap", &WrappedT::getColMap);
     wrapped.module().method("resumeFill", [](WrappedT& w) { w.resumeFill(); });
     wrapped.method("getNumEntriesInGlobalRow", &WrappedT::getNumEntriesInGlobalRow);
     wrapped.method("getGlobalRowCopy", &WrappedT::getGlobalRowCopy);

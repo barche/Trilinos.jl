@@ -199,6 +199,11 @@ function laplace2d(comm, g::CartesianGrid)
   @time graph_laplace2d!(matrix_graph, g)
   Tpetra.fillComplete(matrix_graph)
 
+  println("isContiguous for row map: $(Tpetra.isContiguous(Tpetra.getRowMap(matrix_graph)))")
+  println("isUniform for row map: $(Tpetra.isUniform(Tpetra.getRowMap(matrix_graph)))")
+  println("isContiguous for col map: $(Tpetra.isContiguous(Tpetra.getColMap(matrix_graph)))")
+  println("isUniform for col map: $(Tpetra.isUniform(Tpetra.getColMap(matrix_graph)))")
+
   # Construct the vectors
   b = Tpetra.Vector(Tpetra.getRangeMap(matrix_graph))
   println("Source term time:")
