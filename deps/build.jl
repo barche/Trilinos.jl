@@ -30,7 +30,7 @@ examples_builddir = joinpath(BinDeps.depsdir(trilinoswrap),"builds","upstream_ex
 lib_prefix = @static is_windows() ? "" : "lib"
 lib_suffix = @static is_windows() ? "dll" : (@static is_apple() ? "dylib" : "so")
 
-makeopts = ["--", "-j", "1"] # It really takes a lot of RAM to compile this (> 16 GB with -j4)
+makeopts = ["--", "-j", "4"] # It really takes a lot of RAM to compile this (> 16 GB with -j4)
 
 # Set generator if on windows
 genopt = "Unix Makefiles"
