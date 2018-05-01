@@ -45,7 +45,11 @@ struct WrapMap
     {
       return Teuchos::rcp(new WrappedT(num_indices, index_base.value, comm));
     });
+    wrapped.module().method("Map", [](const Tpetra::global_size_t num_indices, const Teuchos::ArrayView<const typename WrappedT::global_ordinal_type> &index_list, const jlcxx::StrictlyTypedNumber<typename WrappedT::global_ordinal_type> index_base, const Teuchos::RCP<const Teuchos::Comm<int>> &comm, jlcxx::SingletonType<NodeT>) {
+      return Teuchos::rcp(new WrappedT(num_indices, index_list, index_base.value, comm));
+    });
     wrapped.method("getNodeNumElements", &WrappedT::getNodeNumElements);
+    wrapped.method("getGlobalNumElements", &WrappedT::getGlobalNumElements);
     wrapped.method("getGlobalElement", &WrappedT::getGlobalElement);
     wrapped.method("getLocalElement", &WrappedT::getLocalElement);
     wrapped.method("getIndexBase", &WrappedT::getIndexBase);
@@ -80,10 +84,13 @@ struct WrapCrsGraph
     typedef typename TypeWrapperT::type WrappedT;
     typedef typename WrappedT::local_ordinal_type local_ordinal_type;
     typedef typename WrappedT::global_ordinal_type global_ordinal_type;
+    typedef typename WrappedT::map_type map_type;
+    typedef typename WrappedT::local_graph_type local_graph_type;
 
     wrapped.method("insertGlobalIndices",
       static_cast<void (WrappedT::*)(const global_ordinal_type, const Teuchos::ArrayView<const global_ordinal_type>&)>(&WrappedT::insertGlobalIndices));
     wrapped.module().method("fillComplete", [](WrappedT& w) { w.fillComplete(); });
+    wrapped.method("isFillComplete", &WrappedT::isFillComplete);
     wrapped.method("getDomainMap", &WrappedT::getDomainMap);
     wrapped.method("getRangeMap", &WrappedT::getRangeMap);
     wrapped.method("getRowMap", &WrappedT::getRowMap);
@@ -92,13 +99,18 @@ struct WrapCrsGraph
     wrapped.method("getNumEntriesInGlobalRow", &WrappedT::getNumEntriesInGlobalRow);
     wrapped.method("getGlobalRowCopy", &WrappedT::getGlobalRowCopy);
 
-    wrapped.module().method("CrsGraph", [](const Teuchos::RCP<const typename WrappedT::map_type>& rowmap, const std::size_t max_num_entries_per_row)
+    wrapped.module().method("CrsGraph", [](const Teuchos::RCP<const map_type>& rowmap, const std::size_t max_num_entries_per_row)
     {
       return Teuchos::rcp(new WrappedT(rowmap, max_num_entries_per_row, Tpetra::DynamicProfile));
     });
-    wrapped.module().method("CrsGraph", [](const Teuchos::RCP<const typename WrappedT::map_type>& rowmap, const std::size_t max_num_entries_per_row, const Tpetra::ProfileType pftype)
+    wrapped.module().method("CrsGraph", [](const Teuchos::RCP<const map_type>& rowmap, const std::size_t max_num_entries_per_row, const Tpetra::ProfileType pftype)
     {
       return Teuchos::rcp(new WrappedT(rowmap, max_num_entries_per_row, pftype));
+    });
+    wrapped.module().method("local_graph_type", [](jlcxx::SingletonType<WrappedT>) { return jlcxx::SingletonType<local_graph_type>(); });
+    wrapped.module().method("CrsGraph", [](const Teuchos::RCP<const map_type>& rowmap, const Teuchos::RCP<const map_type>& colmap, const local_graph_type& graph)
+    {
+      return Teuchos::rcp(new WrappedT(rowmap, colmap, graph, Teuchos::null));
     });
   }
 };
@@ -119,18 +131,23 @@ struct WrapCrsMatrix
     wrapped.method("insertGlobalValues",
       static_cast<void (WrappedT::*)(const global_ordinal_type, const Teuchos::ArrayView<const global_ordinal_type>&, const Teuchos::ArrayView<const scalar_type>&)>(&WrappedT::insertGlobalValues));
     wrapped.module().method("fillComplete", [](WrappedT& w) { w.fillComplete(); });
+    wrapped.method("isFillComplete", &WrappedT::isFillComplete);
     wrapped.method("getRowMap", &WrappedT::getRowMap);
+    wrapped.method("getColMap", &WrappedT::getColMap);
     wrapped.method("_apply", &WrappedT::apply); // Default arguments not set, hence the _
     wrapped.module().method("apply", [] (const WrappedT& w, const vector_type& a, vector_type& b) { w.apply(a,b); });
     wrapped.module().method("resumeFill", [](WrappedT& w) { w.resumeFill(); });
     wrapped.method("getNumEntriesInGlobalRow", &WrappedT::getNumEntriesInGlobalRow);
     wrapped.method("getGlobalRowCopy", &WrappedT::getGlobalRowCopy);
+    wrapped.method("getLocalRowCopy", &WrappedT::getLocalRowCopy);
     wrapped.method("replaceGlobalValues", static_cast<local_ordinal_type (WrappedT::*)(const global_ordinal_type, const Teuchos::ArrayView<const global_ordinal_type>&, const Teuchos::ArrayView<const scalar_type>&) const>(&WrappedT::replaceGlobalValues));
     wrapped.method("replaceLocalValues", static_cast<local_ordinal_type (WrappedT::*)(const local_ordinal_type, const Teuchos::ArrayView<const local_ordinal_type>&, const Teuchos::ArrayView<const scalar_type>&) const>(&WrappedT::replaceLocalValues));
     wrapped.method("getFrobeniusNorm", &WrappedT::getFrobeniusNorm);
     wrapped.method("apply", &WrappedT::apply);
     wrapped.method("isLocallyIndexed", &WrappedT::isLocallyIndexed);
     wrapped.method("isGloballyIndexed", &WrappedT::isGloballyIndexed);
+    wrapped.method("getNodeNumRows", &WrappedT::getNodeNumRows);
+    wrapped.method("getNodeNumCols", &WrappedT::getNodeNumCols);
 
     wrapped.module().method("CrsMatrix", [](const Teuchos::RCP<const typename WrappedT::map_type>& rowmap, const std::size_t max_num_entries_per_row)
     {
@@ -178,6 +195,7 @@ struct WrapMultiVector
     wrapped.module().method("device_view_type", [] (WrappedT& vec) { return jlcxx::SingletonType<device_view_type>(); });
     wrapped.module().method("getLocalView", [] (jlcxx::SingletonType<host_view_type>, WrappedT& vec) {return jlcxx::create<host_view_type>(vec.template getLocalView<host_view_type>()); } ).set_return_type(jlcxx::julia_type<host_view_type>());
     wrapped.module().method("getLocalView", [] (jlcxx::SingletonType<device_view_type>, WrappedT& vec) {return jlcxx::create<device_view_type>(vec.template getLocalView<device_view_type>()); } ).set_return_type(jlcxx::julia_type<device_view_type>());
+    wrapped.module().method("describe", [](const WrappedT& vec, const Teuchos::EVerbosityLevel verbLevel) { vec.describe(*Teuchos::VerboseObjectBase::getDefaultOStream(), verbLevel); Teuchos::VerboseObjectBase::getDefaultOStream()->flush(); });
   }
 };
 
@@ -209,19 +227,6 @@ struct WrapTpetraNoOp
   }
 };
 
-// Allows using apply_combination on a type that has a non-type parameter (bool in this case, with a default value we never change)
-template<template<typename, typename, typename, bool> class T>
-struct ApplyTpetra3
-{
-  template<typename T1, typename T2, typename T3> using apply = T<T1, T2, T3, false>;
-};
-
-template<template<typename, typename, typename, typename, bool> class T>
-struct ApplyTpetra4
-{
-  template<typename T1, typename T2, typename T3, typename T4> using apply = T<T1, T2, T3, T4, false>;
-};
-
 jl_datatype_t* g_tpetra_operator_type;
 
 jl_datatype_t* tpetra_operator_type()
@@ -243,7 +248,7 @@ void register_tpetra(jlcxx::Module& mod)
     .apply_combination<Tpetra::Map, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapMap());
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("CrsGraph")
-    .apply_combination<ApplyTpetra3<Tpetra::CrsGraph>, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapCrsGraph());
+    .apply_combination<Tpetra::CrsGraph, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapCrsGraph());
 
   auto operator_type = mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("Operator");
   operator_type.apply_combination<Tpetra::Operator, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapTpetraOperator());
@@ -253,12 +258,12 @@ void register_tpetra(jlcxx::Module& mod)
   rowmat_type.apply_combination<Tpetra::RowMatrix, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapTpetraNoOp());
 
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("CrsMatrix", rowmat_type.dt())
-    .apply_combination<ApplyTpetra4<Tpetra::CrsMatrix>, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapCrsMatrix());
+    .apply_combination<Tpetra::CrsMatrix, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapCrsMatrix());
 
   auto multivector = mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("MultiVector");
-  multivector.apply_combination<ApplyTpetra4<Tpetra::MultiVector>, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapMultiVector());
+  multivector.apply_combination<Tpetra::MultiVector, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapMultiVector());
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("Vector", multivector.dt())
-    .apply_combination<ApplyTpetra4<Tpetra::Vector>, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapVector());
+    .apply_combination<Tpetra::Vector, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapVector());
 }
 
 } // namespace trilinoswrap

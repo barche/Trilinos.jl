@@ -3,6 +3,7 @@
 
 #include <Teuchos_ArrayViewDecl.hpp>
 #include <Teuchos_BLAS_types.hpp>
+#include <Teuchos_DefaultMpiComm.hpp>
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_VerbosityLevel.hpp>
 
@@ -26,6 +27,8 @@ template<> struct IsBits<MPI_Comm> : std::true_type {};
 template<> struct IsBits<Teuchos::ENull> : std::true_type {};
 template<> struct IsBits<Teuchos::ETransp> : std::true_type {};
 template<> struct IsBits<Teuchos::EVerbosityLevel> : std::true_type {};
+
+template<> struct SuperType<Teuchos::MpiComm<int>> { typedef Teuchos::Comm<int> type; };
 
 // Some special-casing for RCP
 template<typename T> struct IsSmartPointerType<Teuchos::RCP<T>> : std::true_type { };

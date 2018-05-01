@@ -10,7 +10,8 @@ wrap_module(_l_trilinos_wrap, Tpetra)
 
 Base.dot{ST,LT,GT,NT}(a::CxxUnion{Tpetra.Vector{ST,LT,GT,NT}}, b::CxxUnion{Tpetra.Vector{ST,LT,GT,NT}}) = Tpetra.dot(a,b)
 
-Map(num_indices::Integer, index_base::Integer, comm::CxxWrap.SmartPointer{Teuchos.Comm}) = Map(num_indices, index_base, comm, Kokkos.default_node_type())
+Map(num_indices::Integer, index_base::Integer, comm::CxxWrap.SmartPointer{<:Teuchos.Comm}) = Map(num_indices, index_base, comm, Kokkos.default_node_type())
+Map(num_indices::Integer, index_list, index_base::Integer, comm::CxxWrap.SmartPointer{<:Teuchos.Comm}) = Map(num_indices, index_list, index_base, comm, Kokkos.default_node_type())
 getGlobalElement(map, idx::UInt64) = getGlobalElement(map, convert(Int, idx))
 
 """
@@ -69,5 +70,9 @@ device_view{ST,LT,GT,NT}(v::CxxUnion{Vector{ST,LT,GT,NT}}) = Kokkos.view(getLoca
 Gets an AbstractArray-compatible host view of the local part of the vector. Calls getLocalView internally.
 """
 host_view{ST,LT,GT,NT}(v::CxxUnion{Vector{ST,LT,GT,NT}}) = Kokkos.view(getLocalView(host_view_type(v),v),Val{1})
+
+function CrsGraph(rowmap::CxxUnion{Map{LT,GT,NT}}, colmap::CxxUnion{Map{LT,GT,NT}}, graph::Kokkos.StaticCrsGraph) where {LT,GT,NT}
+  return CrsGraph(rowmap, colmap, local_graph_type(CrsGraph{LT,GT,NT})(graph))
+end
 
 end

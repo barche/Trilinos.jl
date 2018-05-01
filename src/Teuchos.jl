@@ -2,6 +2,7 @@ module Teuchos
 using CxxWrap, MPI
 using Compat
 import .._l_trilinos_wrap
+import ..CxxUnion
 import Base.get
 
 export ParameterList
@@ -74,5 +75,8 @@ Teuchos.Array{T <: AbstractString}(nelems::Integer, elem::T) = Teuchos.Array{Abs
 @compat Base.IndexStyle(::Teuchos.Array) = IndexLinear()
 Base.size(arr::Teuchos.Array) = (size(arr),)
 Base.getindex(arr::Teuchos.Array, i::Integer) = at(arr,i-1)
+
+# Convert Teuchos Comm to MPI.Comm
+MPI.Comm(comm::CxxUnion{Teuchos.MpiComm}) = MPI.Comm(getRawMpiComm(comm))
 
 end

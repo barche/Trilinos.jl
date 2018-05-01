@@ -115,10 +115,13 @@ void register_teuchos(jlcxx::Module& mod)
   mod.add_type<Teuchos::Comm<int>>("Comm")
     .method("getRank", &Teuchos::Comm<int>::getRank)
     .method("getSize", &Teuchos::Comm<int>::getSize);
-  mod.add_type<Teuchos::MpiComm<int>>("MpiComm", julia_type<Teuchos::Comm<int>>());
+  mod.add_type<Teuchos::MpiComm<int>>("MpiComm", julia_type<Teuchos::Comm<int>>())
+    .method("getRawMpiComm", [](const Teuchos::MpiComm<int> &comm) {
+      return (*comm.getRawMpiComm())();
+    });
   mod.method("MpiComm", [](MPI_Comm comm)
   {
-    Teuchos::RCP<const Teuchos::Comm<int>> teuchos_comm(new Teuchos::MpiComm<int>(comm));
+    Teuchos::RCP<const Teuchos::MpiComm<int>> teuchos_comm(new Teuchos::MpiComm<int>(comm));
     return teuchos_comm;
   });
 
