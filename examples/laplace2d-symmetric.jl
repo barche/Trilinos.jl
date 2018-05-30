@@ -3,6 +3,7 @@ using MPIArrays
 using Trilinos
 using BenchmarkTools
 using Compat
+using Base.Test
 
 include("cartesian.jl")
 using Cartesian
@@ -91,7 +92,7 @@ function buildgraph(comm, grid)
 
   # Convert the graph from system global IDs to system local IDs
   map!(x -> globaltolocal(sysghosts,x)-1, staticgraph.entries, staticgraph.entries)
-
+  
   # Construct the Tpetra maps
   rowmap = Tpetra.Map(length(systogrid), Teuchos.ArrayView(collect(localindices(systogrid)...)), 1, comm)
   col_glb_ids = globalids(sysghosts)
@@ -100,10 +101,6 @@ function buildgraph(comm, grid)
 
   graph = Tpetra.CrsGraph(rowmap, colmap, staticgraph)
   @assert Tpetra.isFillComplete(graph)
-
-  finalize(rowmap)
-  finalize(colmap)
-  free(gridtosys)
 
   return graph, sysghosts
 end
@@ -141,60 +138,36 @@ function fillrhs!(b, grid, systogrid)
   end
 end
 
-function displaymat(A,comm)
-  nrows = Int(Tpetra.getGlobalNumElements(Tpetra.getRangeMap(A)))
-  A_mpi = MPIArray{Float64}(MPI.Comm(comm), (nb_procs, 1), nrows, nrows)
-  rowmap = Tpetra.getRowMap(A)
-  colmap = Tpetra.getColMap(A)
-
-  row_indices = zeros(IndexT,5)
-  row_values = fill(-1.0, 5)
-
-  indices_view = Teuchos.ArrayView(row_indices)
-  values_view = Teuchos.ArrayView(row_values)
-  rowlength_ref = Ref(UInt(0))
-
-  forlocalpart!(lp -> fill!(lp,0.0), A_mpi)
-  sync(A_mpi)
-
-  my_nb_rows = Int(Tpetra.getNodeNumRows(A))
-  for row in 1:my_nb_rows
-    Tpetra.getLocalRowCopy(A, row-1, indices_view, values_view, rowlength_ref)
-    grow = Tpetra.getGlobalElement(rowmap, row-1)
-    for i in 1:rowlength_ref[]
-      A_mpi[grow, Tpetra.getGlobalElement(colmap, row_indices[i])] = row_values[i]
-    end
-  end
-  
-  my_rank == 0 && (display(A_mpi); println())
-
-  for i in 1:nrows
-    for j in 1:nrows
-      @assert A_mpi[i,j] == A_mpi[j,i]
-    end
-  end
-  
-  free(A_mpi)
-end
-
 function laplace2d(comm, grid)
-  (graph, systogrid) = buildgraph(comm, grid)
+  println("Graph time:")
+  @time (graph, systogrid) = buildgraph(comm, grid)
 
   A = Tpetra.CrsMatrix(graph)
-  fillmatrix!(A, grid)
-  displaymat(A,comm)
+  println("Matrix fill time:")
+  @time fillmatrix!(A, grid)
+  
+  rangemap = Tpetra.getRangeMap(graph)
+  b = Tpetra.Vector(rangemap)
+  println("RHS fill time:")
+  @time fillrhs!(b, grid, systogrid)
 
-  b = Tpetra.Vector(Tpetra.getRangeMap(graph))
-  fillrhs!(b, grid, systogrid)
+  maxiter = 1000
 
   params = Trilinos.default_parameters("CG")
-  maxiter = 1000
   solver_params = params["Linear Solver Types"]["Belos"]["Solver Types"]["CG"]
   solver_params["Convergence Tolerance"] = 1e-12
   solver_params["Verbosity"] = Belos.StatusTestDetails + Belos.FinalSummary + Belos.TimingDetails
   solver_params["Maximum Iterations"] = Int32(maxiter)
-  params["Preconditioner Type"] = "Ifpack2"
+  params["Preconditioner Type"] = "MueLu"
   
+  # params = Trilinos.default_parameters()
+  # solver_params = params["Linear Solver Types"]["Belos"]["Solver Types"]["BLOCK GMRES"]
+  # solver_params["Convergence Tolerance"] = 1e-12
+  # solver_params["Verbosity"] = Belos.StatusTestDetails + Belos.FinalSummary + Belos.TimingDetails
+  # solver_params["Num Blocks"] = Int32(maxiter)
+  # solver_params["Maximum Iterations"] = Int32(maxiter)
+  # params["Preconditioner Type"] = "Ifpack2"
+
   solver = TpetraSolver(A, params)
 
   return (solver,b,systogrid)
@@ -203,26 +176,44 @@ end
 # MPI setup
 if !MPI.Initialized()
   MPI.Init()
+  MPI.finalize_atexit()
 end
 
 const comm = Teuchos.MpiComm(MPI.CComm(MPI.COMM_WORLD))
 const my_rank = Teuchos.getRank(comm)
 const nb_procs = Int(Teuchos.getSize(comm))
 
-# if my_rank != 0
-#   redirect_stdout(open("/dev/null", "w"))
-#   redirect_stderr(open("/dev/null", "w"))
-# end
+if my_rank != 0
+  redirect_stdout(open("/dev/null", "w"))
+  redirect_stderr(open("/dev/null", "w"))
+end
 
-const nx = 10
+function check_solution(sol, g::CartesianGrid)
+  coords = coordinates(g)
+  gids = LinearIndices(sol)
+  cartinds = CartesianIndices(sol)[localindices(sol)...]
+  
+  return forlocalpart(sol) do lp
+    errorcount = 0
+    for (φ,I) in zip(lp,cartinds)
+      gid = gids[I]
+      x = coords[gid,1]
+      y = coords[gid,2]
+      errorcount +=  Int(abs(φ - (1-x^2)*(1-y^2)) > 1e-10)
+    end
+    return errorcount
+  end
+end
+
+const nx = 1001
 
 function solve_laplace2d(comm)
   h = 2/(nx-1)
   grid = CartesianGrid(nx,nx,h)
 
   (lows,b,systogrid) = laplace2d(comm, grid)
-  # (lows,b,systogrid) = laplace2d(comm, grid)
-  # (lows,b,systogrid) = laplace2d(comm, grid)
+  (lows,b,systogrid) = laplace2d(comm, grid)
+  (lows,b,systogrid) = laplace2d(comm, grid)
 
   # Compute the solution
   solvec = lows \ b
@@ -232,50 +223,50 @@ function solve_laplace2d(comm)
   gridsol = MPIArray{Float64}(MPI.Comm(comm), (nb_procs,1), grid.nx, grid.ny)
   
   myrange = CartesianIndices(localindices(gridsol))
-  localblock = gridsol[localindices(gridsol)...]
-  localmat = getblock(localblock)
-  myblock = GlobalBlock(localmat, localblock)
-
+  
   solview = Tpetra.device_view(solvec)
-  for (i,x) in enumerate(solview)
-    gid = systogrid[i]
-    I = cartinds[gid]
-    if I ∈ myrange
-      myblock[I] = x
-    else
-      gridsol[I] = x
+  ghosts = Dict{Int,CartesianIndex{2}}()
+  forlocalpart!(gridsol) do lp
+    myblock = GlobalBlock(lp, gridsol[localindices(gridsol)...])
+    for (i,x) in enumerate(solview)
+      gid = systogrid[i]
+      I = cartinds[gid]
+      if I ∈ myrange
+        myblock[I] = x
+      else
+        ghosts[i-1] = I
+      end
     end
   end
 
+  for (i,I) in ghosts
+    gridsol[I] = solview[i]
+  end
+  
   for gid in myrange
     I = cartinds[gid]
     if isdirichlet(grid,I)
-      myblock[I] = dirichlet(grid, I)
+      gridsol[I] = dirichlet(grid, I)
     end
   end
 
-  putblock!(localmat,localblock)
-
   sync(gridsol)
 
-  my_rank == 0 && (display(gridsol); println())
+  @test check_solution(gridsol, grid) == 0
+  println("-----------------------------------")
+  println("test time:")
+  @time check_solution(gridsol, grid)
+  @time check_solution(gridsol, grid)
+  @time check_solution(gridsol, grid)
 
-  # @test check_solution(sol, grid)
-  # println("-----------------------------------")
-  # println("test time:")
-  # @time check_solution(sol, grid)
-  # @time check_solution(sol, grid)
-  # @time check_solution(sol, grid)
-
-  # x = linspace(-1.0,1.0,grid.nx)
-  # y = linspace(-1.0,1.0,grid.ny)*grid.h*(grid.ny-1)/2
-  # return (x,y,Tpetra.device_view(sol),grid)
+  return (grid,gridsol)
 end
 
-solve_laplace2d(comm)
+(grid,sol) = solve_laplace2d(comm)
 
-if isinteractive()
-
-else
-  MPI.Finalize()
-end
+# if my_rank == 0
+#   using Plots
+#   heatmap(xrange(grid),yrange(grid),getblock(sol[:,:]))
+#   gui()
+#   readline()
+# end

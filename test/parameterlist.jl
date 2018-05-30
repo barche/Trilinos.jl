@@ -4,13 +4,16 @@ using MPI
 
 pl = Teuchos.ParameterList("test1")
 @test Teuchos.name(pl) == "test1"
+@test isempty(pl)
 
 Teuchos.setName(pl, "test2")
 @test Teuchos.name(pl) == "test2"
 
 @test Teuchos.numParams(pl) == 0
+@test !haskey(pl, "intparam")
 
 Teuchos.set(pl, "intparam", 1)
+@test haskey(pl, "intparam")
 @test Teuchos.isParameter(pl, "intparam")
 @test !Teuchos.isParameter(pl, "dummy")
 @test Teuchos.isType(Int, pl, "intparam")
@@ -36,6 +39,7 @@ pl3 = Teuchos.ParameterList()
 pl2["Manual Sublist"] = pl3
 @test Teuchos.name(pl2["Manual Sublist"]) == "ANONYMOUS"
 
+@test haskey(pl, "child")
 @test Teuchos.isSublist(pl, "child")
 @test pl["child"]["param1"] == "test"
 

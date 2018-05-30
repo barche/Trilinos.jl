@@ -1,12 +1,5 @@
-#include <Thyra_BelosLinearOpWithSolveFactory.hpp>
-#include <Thyra_LinearOpWithSolveBase.hpp>
-#include <Thyra_LinearOpWithSolveFactoryHelpers.hpp>
-#include <Thyra_TpetraLinearOp.hpp>
-#include <Thyra_TpetraMultiVector.hpp>
-#include <Thyra_TpetraVector.hpp>
-#include <Thyra_TpetraThyraWrappers.hpp>
-#include <Thyra_VectorBase.hpp>
-#include <Thyra_VectorStdOps.hpp>
+#include <BelosTpetraAdapter.hpp>
+#include <BelosSolverFactory.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 #include <Tpetra_DefaultPlatform.hpp>
 #include <Tpetra_Map.hpp>
@@ -297,26 +290,28 @@ struct Laplace2D
       // Storage for the solution
       auto x = Teuchos::rcp(new Tpetra::Vector<scalar_t, local_t, global_t>(A->getDomainMap()));
 
-      auto lows_factory = Thyra::BelosLinearOpWithSolveFactory<scalar_t>();
-      auto pl = Teuchos::rcp(new Teuchos::ParameterList());
+      using MVT = Tpetra::MultiVector<scalar_t, local_t, global_t>;
+      using OPT = Tpetra::Operator<scalar_t, local_t, global_t>;
+
+      Belos::SolverFactory<scalar_t, MVT, OPT> belos_factory;
+
+      auto pl = Teuchos::rcp(new Teuchos::ParameterList("BLOCK GMRES"));
       pl->set("Solver Type", "Block GMRES");
-      Teuchos::ParameterList& solver_pl = pl->sublist("Solver Types").sublist("Block GMRES");
-      solver_pl.set("Convergence Tolerance", 1e-12);
-      solver_pl.set("Maximum Iterations", 1000);
-      solver_pl.set("Num Blocks", 1000);
-      lows_factory.setParameterList(pl);
-      lows_factory.setVerbLevel(Teuchos::VERB_HIGH);
-      auto lows = lows_factory.createOp();
+      pl->set("Convergence Tolerance", 1e-12);
+      pl->set("Maximum Iterations", 1000);
+      pl->set("Num Blocks", 1000);
+      pl->set("Verbosity", 56);
+      auto solver = belos_factory.create("BLOCK GMRES", pl);
+      auto linprob = Teuchos::rcp(new Belos::LinearProblem<scalar_t, MVT, OPT>(A, x, b));
+      linprob->setProblem(x,b);
+      solver->setProblem(linprob);
+      
+      std::cout << "solver params:" << std::endl;
+      pl->print();
+      
+      solver->solve();
 
-      auto rangespace = Thyra::tpetraVectorSpace<scalar_t>(A->getRangeMap());
-      auto domainspace = Thyra::tpetraVectorSpace<scalar_t>(A->getDomainMap());
-      const Teuchos::RCP<const Thyra::LinearOpBase<scalar_t>> A_thyra = Thyra::tpetraLinearOp(Teuchos::RCP<const Thyra::VectorSpaceBase<scalar_t>>(rangespace), Teuchos::RCP<const Thyra::VectorSpaceBase<scalar_t>>(domainspace), Teuchos::RCP<Tpetra::Operator<scalar_t,local_t,global_t>>(A));
-      Thyra::initializeOp(lows_factory, A_thyra, lows.ptr());
-
-      const Teuchos::RCP<Thyra::MultiVectorBase<scalar_t>> x_th = Thyra::tpetraVector<scalar_t,local_t,global_t,node_t>(domainspace, x);
-      const Teuchos::RCP<Thyra::MultiVectorBase<scalar_t>> b_th = Thyra::tpetraVector<scalar_t,local_t,global_t,node_t>(rangespace, b);
-
-      auto status = Thyra::solve(*lows, Thyra::NOTRANS, *b_th, x_th.ptr());
+      
 
       if(!check_solution(*x,g))
       {
@@ -340,7 +335,10 @@ struct Laplace2D
       throw std::runtime_error("Local indexing is not supported in parallel runs");
     }
 
-    CartesianGrid grid = {101,101,1.0/50.0};
+    const int nx = 201;
+    const double h = 2.0/(nx-1);
+
+    CartesianGrid grid = {nx,nx,h};
 
     laplace2d(comm, grid);
     Teuchos::TimeMonitor::report(std::cout);

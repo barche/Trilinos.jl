@@ -11,6 +11,10 @@ module MueLu
   """
   function parameters_easy()
     pl = Teuchos.ParameterList("MueLu")
+    parameters_easy!(pl)
+    return pl
+  end
+  function parameters_easy!(pl)
     pl["verbosity"] = "low"
     pl["max levels"] = 3
     pl["coarse: max size"] = 10
@@ -26,7 +30,7 @@ module MueLu
     pl["aggregation: min agg size"] = 3
     pl["aggregation: max agg size"] = 9
 
-    return pl
+    return
   end
 
 end

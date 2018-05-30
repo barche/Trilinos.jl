@@ -4,6 +4,7 @@ using MPI
 
 if Base.Test.get_testset_depth() == 0
   MPI.Init()
+  MPI.finalize_atexit()
 end
 
 comm = Teuchos.MpiComm(MPI.CComm(MPI.COMM_WORLD))
@@ -19,6 +20,3 @@ muelu_prec = MueLu.CreateTpetraPreconditioner(A, MueLu.parameters_easy())
 H = MueLu.GetHierarchy(muelu_prec)
 @test MueLu.GetNumLevels(H) == 3
 
-if Base.Test.get_testset_depth() == 0
-  MPI.Finalize()
-end

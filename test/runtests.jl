@@ -2,6 +2,7 @@ using MPI
 using Base.Test
 
 MPI.Init()
+MPI.finalize_atexit()
 
 excluded = ["runtests.jl"]
 
@@ -11,5 +12,3 @@ excluded = ["runtests.jl"]
   end
   sleep(1)
 end
-
-MPI.Finalize()

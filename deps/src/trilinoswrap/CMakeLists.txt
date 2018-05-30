@@ -28,7 +28,7 @@ add_library(trilinoswrap SHARED
   tpetra.cpp
   thyra.cpp
 )
-target_link_libraries(trilinoswrap ${Teuchos_LIBRARIES} ${Tpetra_LIBRARIES} ${Stratimikos_LIBRARIES} ${Thyra_LIBRARIES} ${Ifpack2_LIBRARIES} ${MueLu_LIBRARIES} JlCxx::jlcxx)
+target_link_libraries(trilinoswrap ${Teuchos_LIBRARIES} ${Tpetra_LIBRARIES} ${Stratimikos_LIBRARIES} ${Thyra_LIBRARIES} ${Ifpack2_LIBRARIES} ${MueLu_LIBRARIES} JlCxx::cxxwrap_julia)
 
 install(TARGETS
   trilinoswrap

@@ -5,7 +5,7 @@ module Cartesian
 
 using Compat
 
-export CartesianGrid, nb_nodes, origin, coordinates, cartesianindices, nb_neighbors, setneighbors!, dirichletrhs
+export CartesianGrid, nb_nodes, origin, coordinates, cartesianindices, nb_neighbors, setneighbors!, dirichletrhs, xrange, yrange
 
 """
 Represents a 2D cartesian grid with uniform spacing
@@ -23,6 +23,10 @@ linearindices(g::CartesianGrid) = LinearIndices((g.nx, g.ny))
 Origin of the mesh
 """
 origin(g::CartesianGrid) = (g.h*(g.nx-1)/2, g.h*(g.ny-1)/2)
+
+coordrange(g::CartesianGrid, dim) = -origin(g)[dim]:g.h:origin(g)[dim]
+xrange(g::CartesianGrid) = coordrange(g,1)
+yrange(g::CartesianGrid) = coordrange(g,2)
 
 """
 Number of nodes in the mesh
@@ -46,7 +50,7 @@ end
 
 Base.size(coords::LinearCoordinates) = (nb_nodes(coords.grid), 2)
 
-function laplace2D_stencil(I::CartesianIndex)
+@inline function laplace2D_stencil(I::CartesianIndex)
   return CartesianIndex.((0,0,-1, 0,1),
                          (0,1, 0,-1,0)) .+ I
 end

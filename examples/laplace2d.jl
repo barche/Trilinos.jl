@@ -186,7 +186,7 @@ function check_solution(sol, g::CartesianGrid)
 end
 
 """
-Assemble the 2D Posson problem on a structured grid
+Assemble the 2D Poisson problem on a structured grid
 """
 function laplace2d(comm, g::CartesianGrid)
   # Construct map
@@ -198,11 +198,6 @@ function laplace2d(comm, g::CartesianGrid)
   println("Graph construction time:")
   @time graph_laplace2d!(matrix_graph, g)
   Tpetra.fillComplete(matrix_graph)
-
-  println("isContiguous for row map: $(Tpetra.isContiguous(Tpetra.getRowMap(matrix_graph)))")
-  println("isUniform for row map: $(Tpetra.isUniform(Tpetra.getRowMap(matrix_graph)))")
-  println("isContiguous for col map: $(Tpetra.isContiguous(Tpetra.getColMap(matrix_graph)))")
-  println("isUniform for col map: $(Tpetra.isUniform(Tpetra.getColMap(matrix_graph)))")
 
   # Construct the vectors
   b = Tpetra.Vector(Tpetra.getRangeMap(matrix_graph))
@@ -231,7 +226,7 @@ function laplace2d(comm, g::CartesianGrid)
   solver_params["Num Blocks"] = Int32(maxiter)
   solver_params["Maximum Iterations"] = Int32(maxiter)
 
-  #params["Preconditioner Type"] = "None"
+  params["Preconditioner Type"] = "MueLu"
   
   solver = TpetraSolver(A, params)
 
@@ -240,7 +235,9 @@ end
 
 function solve_laplace2d(comm)
 
-  grid = CartesianGrid(101,101,1/50)
+  nx = 1001
+  h = 2/(nx-1)
+  grid = CartesianGrid(nx,nx,h)
 
   (lows,b) = laplace2d(comm, grid)
   (lows,b) = laplace2d(comm, grid)
@@ -264,6 +261,7 @@ end
 # MPI setup
 if !MPI.Initialized()
   MPI.Init()
+  MPI.finalize_atexit()
 end
 comm = Teuchos.MpiComm(MPI.CComm(MPI.COMM_WORLD))
 
@@ -282,6 +280,4 @@ end
 
 if isinteractive()
   plot(x, y, f, aspect_ratio=1, seriestype=:heatmap)
-else
-  MPI.Finalize()
 end

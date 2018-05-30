@@ -47,6 +47,8 @@ Base.keys(pl::ParUnion) = keys(pl)
 Base.start(pl::ParUnion) = (start(keys(pl)), keys(pl))
 Base.next(pl::ParUnion, state) = ((state[2][state[1]], pl[state[2][state[1]]]), (state[1]+1,state[2]))
 Base.done(pl::ParUnion, state) = state[1] == length(state[2])+1
+Base.haskey(pl::ParUnion, key) = isParameter(pl, key)
+Base.isempty(pl::ParUnion) = (numParams(pl) == 0)
 
 get(pl::ParUnion, key, default_value) = isParameter(pl, key) ? pl[key] : default_value
 

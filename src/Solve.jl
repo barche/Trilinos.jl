@@ -38,6 +38,15 @@ function TpetraSolver(A::CxxUnion{Tpetra.CrsMatrix{ST,LT,GT,NT}}, parameterlist 
       Ifpack2.compute(M)
       Belos.setRightPrec(linprob, M)
       ifpack_list.output[ifpack2_type] = ifpack2_params_new
+    elseif prec_type == "MueLu"
+      prec_list = Teuchos.sublist(params, "Preconditioner Types")
+      muelu_list = Teuchos.sublist(prec_list, "MueLu")
+      if isempty(muelu_list.input)
+        MueLu.parameters_easy!(muelu_list.output)
+      end
+
+      muelu_prec = MueLu.CreateTpetraPreconditioner(A, muelu_list.output)
+      Belos.setRightPrec(linprob, muelu_prec)
     elseif prec_type == "None"
       nothing
     else

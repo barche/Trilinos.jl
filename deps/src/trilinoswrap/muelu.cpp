@@ -54,7 +54,7 @@ struct WrapMueLuFunctions
     typedef typename ParametersT::GT GlobalOrdinal;
     typedef typename ParametersT::NT Node;
 
-    m_module.method("CreateTpetraPreconditioner", [] (const Teuchos::RCP<Tpetra::CrsMatrix<Scalar, LocalOrdinal, GlobalOrdinal, Node> > &inA,
+    m_module.method("CreateTpetraPreconditioner", [] (const Teuchos::RCP<Tpetra::Operator<Scalar, LocalOrdinal, GlobalOrdinal, Node> > &inA,
                          Teuchos::ParameterList& inParamList,
                          const Teuchos::RCP<Tpetra::MultiVector<double, LocalOrdinal, GlobalOrdinal, Node>>& inCoords,
                          const Teuchos::RCP<Tpetra::MultiVector<Scalar, LocalOrdinal, GlobalOrdinal, Node>>& inNullspace)
@@ -62,14 +62,14 @@ struct WrapMueLuFunctions
       return MueLu::CreateTpetraPreconditioner(inA, inParamList, inCoords, inNullspace);
     });
 
-    m_module.method("CreateTpetraPreconditioner", [] (const Teuchos::RCP<Tpetra::CrsMatrix<Scalar, LocalOrdinal, GlobalOrdinal, Node> > &inA,
+    m_module.method("CreateTpetraPreconditioner", [] (const Teuchos::RCP<Tpetra::Operator<Scalar, LocalOrdinal, GlobalOrdinal, Node> > &inA,
                          Teuchos::ParameterList& inParamList,
                          const Teuchos::RCP<Tpetra::MultiVector<double, LocalOrdinal, GlobalOrdinal, Node>>& inCoords)
     {
       return MueLu::CreateTpetraPreconditioner(inA, inParamList, inCoords);
     });
 
-    m_module.method("CreateTpetraPreconditioner", [] (const Teuchos::RCP<Tpetra::CrsMatrix<Scalar, LocalOrdinal, GlobalOrdinal, Node> > &inA,
+    m_module.method("CreateTpetraPreconditioner", [] (const Teuchos::RCP<Tpetra::Operator<Scalar, LocalOrdinal, GlobalOrdinal, Node> > &inA,
                          Teuchos::ParameterList& inParamList)
     {
       return MueLu::CreateTpetraPreconditioner(inA, inParamList);
@@ -86,7 +86,7 @@ void register_muelu(jlcxx::Module& mod)
   mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("Hierarchy")
     .apply_combination<MueLu::Hierarchy, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapHierarchy());
 
-  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("TpetraOperator")
+  mod.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>, TypeVar<4>>>("TpetraOperator", tpetra_operator_type())
     .apply_combination<MueLu::TpetraOperator, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t>(WrapMueLuTpetraOperator());
 
   typedef jlcxx::combine_types<jlcxx::ApplyType<MueLuParameters>, scalars_t, local_ordinals_t, global_ordinals_t, kokkos_nodes_t> params_t;
