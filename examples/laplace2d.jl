@@ -1,7 +1,6 @@
 using MPI
 using Trilinos
-using Base.Test
-using Compat
+using Test
 
 if isinteractive()
   using Plots
@@ -10,9 +9,9 @@ end
 const USE_LOCAL_INDICES = !isempty(ARGS) && ARGS[1] == "local"
 
 @static if USE_LOCAL_INDICES
-  @compat const IdxT = Int32
+  const IdxT = Int32
 else
-  @compat const IdxT = Int
+  const IdxT = Int
 end
 
 function replace_values(A, gid, indices, values)
@@ -47,7 +46,7 @@ function is_node_global_element(rowmap,gid)
   end
 end
 
-immutable CartesianGrid
+struct CartesianGrid
   nx::Int # Number of points in the X direction
   ny::Int # Number of points in the Y direction
   h::Float64 # Spacing
@@ -99,8 +98,8 @@ function set_source_term!(b, g::CartesianGrid)
   rowmap = Tpetra.getMap(b)
   b_view = Tpetra.device_view(b)
   n_my_elms = Tpetra.getNodeNumElements(rowmap)
-  @assert n_my_elms == length(linearindices(b_view))
-  for i in linearindices(b_view)
+  @assert n_my_elms == length(LinearIndices(b_view))
+  for i in LinearIndices(b_view)
     gid = global_element(rowmap,i)
     (x,y) = coordinates(g,gid)
     b_view[i] = 2*g.h^2*((1-x^2)+(1-y^2))
@@ -177,7 +176,7 @@ function check_solution(sol, g::CartesianGrid)
   solmap = Tpetra.getMap(sol)
   solview = Tpetra.device_view(sol)
   result = 0
-  for i in linearindices(solview)
+  for i in LinearIndices(solview)
     gid = global_element(solmap, i)
     (x,y) = coordinates(g,gid)
     result +=  abs(solview[i] - (1-x^2)*(1-y^2)) > 1e-10

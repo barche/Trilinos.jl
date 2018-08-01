@@ -1,8 +1,8 @@
 using Trilinos
-using Base.Test
+using Test
 using MPI
 
-if Base.Test.get_testset_depth() == 0
+if Test.get_testset_depth() == 0
   MPI.Init()
 end
 
@@ -43,23 +43,23 @@ host_mv = Tpetra.getLocalView(host_mvt, mv)
 
 # high-level interface, views are 0-based for consistency with the Trilinos API
 hv1 = Tpetra.host_view(v)
-@test length(linearindices(hv1)) == num_my_elements
+@test length(LinearIndices(hv1)) == num_my_elements
 if my_rank == 0
   hv1[0] = 3
 end
 if my_rank == (Teuchos.getSize(comm)-1)
-  hv1[last(indices(hv1,1))] = 4
+  hv1[last(axes(hv1,1))] = 4
 end
 @show hv1
 @test Tpetra.dot(v,v) == (n-2)+9.0+16.0
 
 dv2 = Tpetra.device_view(mv)
-@test map(length,indices(dv2)) == (num_my_elements, mv_cols)
+@test map(length,axes(dv2)) == (num_my_elements, mv_cols)
 if my_rank == 0
   dv2[0,0] = 3
 end
 if my_rank == (Teuchos.getSize(comm)-1)
-  dv2[last(indices(dv2,1)),2] = 4
+  dv2[last(axes(dv2,1)),2] = 4
 end
 
 sim_mat = similar(dv2)
@@ -90,7 +90,7 @@ end
 function benchmark_fill_abstractarray(rowmap, a)
   num_my_elements = Int(Tpetra.getNodeNumElements(rowmap))
   av = Tpetra.device_view(a)
-  for i in linearindices(av)
+  for i in LinearIndices(av)
     av[i] = i
   end
 end
@@ -98,8 +98,8 @@ end
 function benchmark_fill_abstractarray2(rowmap, a)
   num_my_elements = Int(Tpetra.getNodeNumElements(rowmap))
   av = Tpetra.device_view(a)
-  for j in indices(av,2)
-    for i in indices(av,1)
+  for j in axes(av,2)
+    for i in axes(av,1)
       av[i,j] = i*(j+1)
     end
   end
@@ -169,6 +169,6 @@ println("C++ timings, MultiVector:")
 @test benchmvview[0,0] == 0
 @test benchmvview[v_end,mv_cols-1] == (n_my_elms-1)*mv_cols
 
-if Base.Test.get_testset_depth() == 0
+if Test.get_testset_depth() == 0
   MPI.Finalize()
 end

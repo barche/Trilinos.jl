@@ -3,8 +3,6 @@
 """
 module Cartesian
 
-using Compat
-
 export CartesianGrid, nb_nodes, origin, coordinates, cartesianindices, nb_neighbors, setneighbors!, dirichletrhs, xrange, yrange
 
 """
@@ -17,7 +15,7 @@ struct CartesianGrid
 end
 
 cartesianindices(g::CartesianGrid) = CartesianIndices((g.nx, g.ny))
-linearindices(g::CartesianGrid) = LinearIndices((g.nx, g.ny))
+LinearIndices(g::CartesianGrid) = LinearIndices((g.nx, g.ny))
 
 """
 Origin of the mesh
@@ -52,7 +50,7 @@ Base.size(coords::LinearCoordinates) = (nb_nodes(coords.grid), 2)
 
 @inline function laplace2D_stencil(I::CartesianIndex)
   return CartesianIndex.((0,0,-1, 0,1),
-                         (0,1, 0,-1,0)) .+ I
+                         (0,1, 0,-1,0)) .+ Ref(I)
 end
 
 function nb_neighbors(grid::CartesianGrid, gid::Integer, f::Function)
@@ -61,7 +59,7 @@ end
 
 function setneighbors!(array, startidx, grid::CartesianGrid, gid::Integer, f::Function)
   cartinds = cartesianindices(grid)
-  lininds = linearindices(grid)
+  lininds = LinearIndices(grid)
   i = startidx
   for I in laplace2D_stencil(cartinds[gid])
     if I ∈ cartinds && f(grid,I)
@@ -74,7 +72,7 @@ end
 
 function dirichletrhs(grid::CartesianGrid, gid::Integer, isdirichlet::Function, dirichletval::Function)
   cartinds = cartesianindices(grid)
-  lininds = linearindices(grid)
+  lininds = LinearIndices(grid)
   result = 0.0
   for I in laplace2D_stencil(cartinds[gid])
     if I ∈ cartinds && isdirichlet(grid,I)

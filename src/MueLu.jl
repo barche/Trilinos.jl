@@ -1,10 +1,10 @@
 module MueLu
   using CxxWrap, MPI
-  import .._l_trilinos_wrap
+  import ..libjltrilinos
   import ..Teuchos
   import ..Tpetra
 
-  wrap_module(_l_trilinos_wrap, MueLu)
+  @wrapmodule(libjltrilinos, :register_muelu)
 
   """
   Return the "easy" parameters from the MueLu tutorial

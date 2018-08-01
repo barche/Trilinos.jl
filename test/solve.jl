@@ -1,20 +1,20 @@
 using Trilinos
-using Base.Test
+using Test
 using MPI
 
-if Base.Test.get_testset_depth() == 0
+if Test.get_testset_depth() == 0
   MPI.Init()
 end
 
 # The number of matrix rows
-const n = 20
+const n_sol = 20
 
 # Reuse the communicator from MPI.jl
 comm = Teuchos.MpiComm(MPI.CComm(MPI.COMM_WORLD))
-# Disribute n evenly over the number of processes
-rowmap = Tpetra.Map(n, 0, comm)
+# Disribute n_sol evenly over the number of processes
+rowmap = Tpetra.Map(n_sol, 0, comm)
 # Construct a matrix from a Julia sparse unit matrix
-A = Tpetra.CrsMatrix(spdiagm((ones(n),), (0,)),rowmap)
+A = Tpetra.CrsMatrix(spdiagm(0 => ones(n_sol)),rowmap)
 
 # Solver with default parameter
 solver = TpetraSolver(A)
@@ -33,6 +33,6 @@ for (bi,xi) in zip(bv,xv)
   @test bi ≈ xi
 end
 
-if Base.Test.get_testset_depth() == 0
+if Test.get_testset_depth() == 0
   MPI.Finalize()
 end

@@ -1,7 +1,6 @@
 using MPI
 using Trilinos
-using Base.Test
-using Compat
+using Test
 using BenchmarkTools
 #using Cartesian
 

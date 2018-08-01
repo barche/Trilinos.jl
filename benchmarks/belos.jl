@@ -1,7 +1,7 @@
 using BenchmarkTools
 using MPI
 using Trilinos
-using Base.Test
+using Test
 
 MPI.Init()
 
@@ -18,7 +18,7 @@ end
 function indefinite(n)
   # Generate an indefinite "hard" matrix
   srand(1)
-  A = 20 * speye(n) + sprand(n, n, 20.0 / n)
+  A = 20 * sparse(1.0I, n, n) + sprand(n, n, 20.0 / n)
   A = (A + A') / 2
   x = ones(n)
   b = A * x
@@ -49,9 +49,10 @@ returns discrete Laplacian, interior part, and boundary part, on regular mesh wi
 """
 function getLaplacian(n::Int)
     h  = 1/n
-    dx = spdiagm((-ones(n,1),ones(n,1)),0:1,n,n+1)/h
-    d2x = dx'*dx
-    L  = kron(speye(n+1),d2x) + kron(d2x,speye(n+1))
+    d2x = spdiagm(-1 => fill(-1.0/h,n), 0 => fill(2.0/h,n+1), 1 => fill(-1.0/h,n))
+    d2x[1] /= 2
+    d2x[end] /= 2
+    L  = kron(sparse(1.0I, n+1, n+1),d2x) + kron(d2x,sparse(1.0I, n+1, n+1))
     
     # split into boundary and interior part
     ibc,iin = getBoundaryIndices(n)
@@ -124,7 +125,7 @@ function build_checked_system(f, solver_name, prec_type, n, tol, restart::Int, m
   v = Tpetra.device_view(sol)
   refv = Tpetra.device_view(refsol)
   maxerr = 0
-  for i in linearindices(v)
+  for i in LinearIndices(v)
     maxerr = max(abs(v[i] - refv[i]), maxerr)
   end
   @test maxerr < 100*tol

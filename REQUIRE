@@ -1,6 +1,5 @@
-julia 0.5
-BinDeps 0.4.5
-MPI 0.5.0
-CxxWrap 0.5 0.6-
-Compat 0.19
-CustomUnitRanges 0.0.4 0.1-
+julia 0.7.0-beta
+BinaryProvider
+MPI
+CxxWrap 0.7 0.8
+CustomUnitRanges 0.1 0.2

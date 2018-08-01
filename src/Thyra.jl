@@ -1,21 +1,21 @@
 module Thyra
-using CxxWrap, MPI, Compat
-import .._l_trilinos_wrap
+using CxxWrap, MPI
+import ..libjltrilinos
 import ..CxxUnion
 import ..Teuchos
 import ..Tpetra
 
 export LinearOpWithSolve
 
-wrap_module(_l_trilinos_wrap, Thyra)
+@wrapmodule(libjltrilinos, :register_thyra)
 
-@compat immutable LinearOpWithSolve{ST,LT,GT,NT}
+struct LinearOpWithSolve{ST,LT,GT,NT}
   lows::CxxWrap.SmartPointer{Thyra.LinearOpWithSolveBase{ST}}
   domainmap::CxxWrap.SmartPointer{Tpetra.Map{LT,GT,NT}}
   rangespace::CxxWrap.SmartPointer{Thyra.TpetraVectorSpace{ST,LT,GT,NT}}
   domainspace::CxxWrap.SmartPointer{Thyra.TpetraVectorSpace{ST,LT,GT,NT}}
 
-  function (::Type{LinearOpWithSolve{ST,LT,GT,NT}}){ST,LT,GT,NT}(A::CxxUnion{Tpetra.CrsMatrix{ST,LT,GT,NT}}, parameters::CxxUnion{Teuchos.ParameterList}, verbosity::Teuchos.EVerbosityLevel)
+  function LinearOpWithSolve{ST,LT,GT,NT}(A::CxxUnion{Tpetra.CrsMatrix{ST,LT,GT,NT}}, parameters::CxxUnion{Teuchos.ParameterList}, verbosity::Teuchos.EVerbosityLevel) where {ST,LT,GT,NT}
     lows_factory = Thyra.BelosLinearOpWithSolveFactory(ST)
     Thyra.setParameterList(lows_factory, parameters)
     Thyra.setVerbLevel(lows_factory, verbosity)
@@ -31,13 +31,13 @@ wrap_module(_l_trilinos_wrap, Thyra)
   end
 end
 
-function LinearOpWithSolve{ST,LT,GT,NT}(A::CxxUnion{Tpetra.CrsMatrix{ST,LT,GT,NT}}, parameters::CxxUnion{Teuchos.ParameterList}=Teuchos.ParameterList(), verbosity::Teuchos.EVerbosityLevel=Teuchos.VERB_NONE)
+function LinearOpWithSolve(A::CxxUnion{Tpetra.CrsMatrix{ST,LT,GT,NT}}, parameters::CxxUnion{Teuchos.ParameterList}=Teuchos.ParameterList(), verbosity::Teuchos.EVerbosityLevel=Teuchos.VERB_NONE) where {ST,LT,GT,NT}
   return LinearOpWithSolve{ST,LT,GT,NT}(A,parameters,verbosity)
 end
 
 import Base: \
 
-function \{ST,LT,GT,NT}(A::LinearOpWithSolve{ST,LT,GT,NT}, b::CxxUnion{Tpetra.Vector{ST,LT,GT,NT}})
+function \(A::LinearOpWithSolve{ST,LT,GT,NT}, b::CxxUnion{Tpetra.Vector{ST,LT,GT,NT}}) where {ST,LT,GT,NT}
   x = Tpetra.Vector(A.domainmap)
   x_th = Thyra.tpetraVector(A.domainspace, x)
   b_th = Thyra.tpetraVector(A.rangespace, b)

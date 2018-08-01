@@ -1,4 +1,4 @@
-@compat abstract type TrilinosSolver end
+abstract type TrilinosSolver end
 
 """
 Solver that works directly on Tpetra CrsMatrix and MultiVector, parametrized using a Teuchos ParameterList

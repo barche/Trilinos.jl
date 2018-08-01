@@ -1,8 +1,8 @@
 using Trilinos
-using Base.Test
+using Test
 using MPI
 
-if Base.Test.get_testset_depth() == 0
+if Test.get_testset_depth() == 0
   MPI.Init()
 end
 
@@ -11,7 +11,7 @@ comm = Teuchos.MpiComm(MPI.CComm(MPI.COMM_WORLD))
 const n = 20
 
 # tri-diagonal nxn test matrix
-A = spdiagm((2*ones(n-1),ones(n),3*ones(n-1)), (-1,0,1))
+A = spdiagm(-1 => 2*ones(n-1), 0 => ones(n), 1=> 3*ones(n-1))
 
 rowmap = Tpetra.Map(n, 0, comm)
 A_crs = Tpetra.CrsMatrix(A,rowmap)
@@ -34,6 +34,6 @@ end
 @time loop_gid(rowmap[])
 @time loop_gid(rowmap[])
 
-if Base.Test.get_testset_depth() == 0
+if Test.get_testset_depth() == 0
   MPI.Finalize()
 end

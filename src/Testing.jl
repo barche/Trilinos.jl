@@ -1,7 +1,7 @@
 module Testing
   using CxxWrap, MPI
-  import .._l_trilinos_wrap
+  import ..libjltrilinos
   import ..Teuchos
 
-  wrap_module(_l_trilinos_wrap, Testing)
+  @wrapmodule(libjltrilinos, :register_testing)
 end

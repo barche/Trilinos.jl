@@ -1,5 +1,5 @@
 using Trilinos
-using Base.Test
+using Test
 using MPI
 
 pl = Teuchos.ParameterList("test1")

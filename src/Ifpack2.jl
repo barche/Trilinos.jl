@@ -1,10 +1,10 @@
 module Ifpack2
   using CxxWrap, MPI
-  import .._l_trilinos_wrap
+  import ..libjltrilinos
   import ..Teuchos
   import ..Tpetra
 
-  wrap_module(_l_trilinos_wrap, Ifpack2)
+  @wrapmodule(libjltrilinos, :register_ifpack2)
 
   function default_parameters(ifpack_prec = "ILUT")
     pl = Teuchos.ParameterList("Ifpack2")

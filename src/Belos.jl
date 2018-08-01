@@ -1,7 +1,7 @@
 module Belos
   using CxxWrap, MPI
-  import .._l_trilinos_wrap
+  import ..libjltrilinos
   import ..Teuchos
 
-  wrap_module(_l_trilinos_wrap, Belos)
+  @wrapmodule(libjltrilinos, :register_belos)
 end

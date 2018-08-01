@@ -13,7 +13,6 @@ export Thyra
 export TpetraSolver
 
 using CxxWrap
-using Compat
 
 # Load the deps
 const depsfile = joinpath(dirname(dirname(@__FILE__)), "deps", "deps.jl")
@@ -27,7 +26,7 @@ include(depsfile)
   CxxWrap.argument_overloads(t::Type{UInt64}) = [Int64]
 end
 
-@compat CxxUnion{T} = Union{T,CxxWrap.SmartPointer{T}}
+const CxxUnion{T} = Union{T,CxxWrap.SmartPointer{T}}
 
 include("Teuchos.jl")
 include("Kokkos.jl")

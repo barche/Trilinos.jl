@@ -1,6 +1,6 @@
 module Benchmark
   using CxxWrap, MPI
-  import .._l_trilinos_wrap
+  import ..libjltrilinos
 
-  wrap_module(_l_trilinos_wrap, Benchmark)
+  @wrapmodule(libjltrilinos, :register_benchmark)
 end

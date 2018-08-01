@@ -1,8 +1,8 @@
 using Trilinos
-using Base.Test
+using Test
 using MPI
 
-if Base.Test.get_testset_depth() == 0
+if Test.get_testset_depth() == 0
   MPI.Init()
 end
 
@@ -16,6 +16,6 @@ rowmap0 = Tpetra.Map(n, 0, comm)
 rowmap1 = Tpetra.Map(n, 1, comm)
 @test Tpetra.getIndexBase(rowmap1) == 1
 
-if Base.Test.get_testset_depth() == 0
+if Test.get_testset_depth() == 0
   MPI.Finalize()
 end

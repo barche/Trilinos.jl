@@ -2,11 +2,10 @@ using MPI
 using MPIArrays
 using Trilinos
 using BenchmarkTools
-using Compat
-using Base.Test
+using Test
 
 include("cartesian.jl")
-using Cartesian
+using .Cartesian
 
 if isinteractive()
   using Plots
@@ -130,7 +129,7 @@ end
 function fillrhs!(b, grid, systogrid)
   b_view = Tpetra.device_view(b)
   gcoords = coordinates(grid)
-  for i in linearindices(b_view)
+  for i in LinearIndices(b_view)
     gid = systogrid[i+1]
     x = gcoords[gid,1]
     y = gcoords[gid,2]

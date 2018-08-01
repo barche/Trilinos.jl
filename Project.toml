@@ -1,0 +1,13 @@
+name = "Trilinos"
+uuid = "8c7390fa-8ac3-11e8-14fe-f33cb662dfef"
+authors = ["Bart Janssens <bart@bartjanssens.org>"]
+version = "0.1.0"
+
+[deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+BinaryProvider = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
+CustomUnitRanges = "dc8bdbbb-1ca9-579f-8c36-e416f6a65cce"
+CxxWrap = "d6fb6aec-6fa4-11e8-0e77-af5d660a6b49"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"

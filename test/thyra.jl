@@ -1,8 +1,8 @@
 using Trilinos
-using Base.Test
+using Test
 using MPI
 
-if Base.Test.get_testset_depth() == 0
+if Test.get_testset_depth() == 0
   MPI.Init()
 end
 
@@ -16,7 +16,7 @@ lows = Thyra.createOp(lows_factory)
 comm = Teuchos.MpiComm(MPI.CComm(MPI.COMM_WORLD))
 const n = 20
 rowmap = Tpetra.Map(n, 0, comm)
-A = Tpetra.CrsMatrix(spdiagm((ones(n),), (0,)),rowmap)
+A = Tpetra.CrsMatrix(spdiagm(0 => ones(n)),rowmap)
 
 rangespace = Thyra.tpetraVectorSpace(Tpetra.getRangeMap(A))
 domainspace = Thyra.tpetraVectorSpace(Tpetra.getDomainMap(A))
@@ -42,11 +42,11 @@ x2 = lows2 \ b
 # Check result
 bv = Tpetra.device_view(b)
 xv = Tpetra.device_view(x2)
-@test length(linearindices(bv)) == length(linearindices(xv))
+@test length(LinearIndices(bv)) == length(LinearIndices(xv))
 for (bi,xi) in zip(bv,xv)
   @test bi ≈ xi
 end
 
-if Base.Test.get_testset_depth() == 0
+if Test.get_testset_depth() == 0
   MPI.Finalize()
 end
