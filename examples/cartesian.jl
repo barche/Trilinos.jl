@@ -15,7 +15,7 @@ struct CartesianGrid
 end
 
 cartesianindices(g::CartesianGrid) = CartesianIndices((g.nx, g.ny))
-LinearIndices(g::CartesianGrid) = LinearIndices((g.nx, g.ny))
+Base.LinearIndices(g::CartesianGrid) = LinearIndices((g.nx, g.ny))
 
 """
 Origin of the mesh

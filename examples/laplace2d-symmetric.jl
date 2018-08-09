@@ -7,10 +7,6 @@ using Test
 include("cartesian.jl")
 using .Cartesian
 
-if isinteractive()
-  using Plots
-end
-
 const IndexT = Int32
 
 """
@@ -46,7 +42,7 @@ function buildgraph(comm, grid)
   forlocalpart!(lp -> fill!(lp, -1), gridtosys)
   sync(gridtosys)
 
-  forlocalpart!(systogrid) do sys_lp
+  forlocalpart(systogrid) do sys_lp
     sysgids = localindices(systogrid)[1]
     gridblock = gridtosys[minimum(sys_lp):maximum(sys_lp)]
     gridarr = getblock(gridblock)
@@ -263,9 +259,10 @@ end
 
 (grid,sol) = solve_laplace2d(comm)
 
-# if my_rank == 0
-#   using Plots
-#   heatmap(xrange(grid),yrange(grid),getblock(sol[:,:]))
-#   gui()
-#   readline()
-# end
+if my_rank == 0
+  using Plots
+  heatmap(xrange(grid),yrange(grid),getblock(sol[:,:]),aspect_ratio=1)
+  gui()
+  readline()
+  savefig("laplace2d-result.png")
+end

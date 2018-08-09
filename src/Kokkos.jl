@@ -53,8 +53,8 @@ module Kokkos
     entries::Vector{Int}
   
     function StaticCrsGraph(nb_rows, nb_entries)
-      rowmap = Vector{Int}(nb_rows+1)
-      entries = Vector{Int}(nb_entries)
+      rowmap = Vector{Int}(undef, nb_rows+1)
+      entries = Vector{Int}(undef, nb_entries)
       rowmap[end] = nb_entries
       return new(rowmap,entries)
     end
@@ -63,10 +63,9 @@ module Kokkos
   get_datatype(::Type{View3{Ptr{DT},LayoutT,SpaceT}}) where {DT,LayoutT,SpaceT} = DT
   get_datatype(::Type{View3{CxxWrap.ConstPtr{DT},LayoutT,SpaceT}}) where {DT,LayoutT,SpaceT} = DT
 
-  function StaticCrsGraph_cpp(g::StaticCrsGraph) where {DT,LayoutT,DevT}
-    graph_t = StaticCrsGraph_cpp{DT,LayoutT,DevT}
-    entries_t = entries_type(graph_t)
-    rowmap_t = row_map_type(graph_t)
-    return graph_t(makeview(entries_t, "entries", convert(Vector{get_datatype(entries_t)}, g.entries)), makeview(rowmap_t, "rowmap", convert(Vector{get_datatype(rowmap_t)}, g.rowmap)))
+  function to_cpp(g::StaticCrsGraph, ::Type{GraphT}) where {GraphT}
+    entries_t = entries_type(GraphT)
+    rowmap_t = row_map_type(GraphT)
+    return GraphT(makeview(entries_t, "entries", convert(Vector{get_datatype(entries_t)}, g.entries)), makeview(rowmap_t, "rowmap", convert(Vector{get_datatype(rowmap_t)}, g.rowmap)))
   end
 end
