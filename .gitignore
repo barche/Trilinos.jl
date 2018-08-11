@@ -3,5 +3,6 @@
 *.jl.mem
 /deps/builds
 /deps/deps.jl
+/deps/build.log
 /deps/usr
 Manifest.toml
